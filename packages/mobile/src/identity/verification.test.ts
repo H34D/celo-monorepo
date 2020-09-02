@@ -3,33 +3,57 @@ import { expectSaga } from 'redux-saga-test-plan'
 import * as matchers from 'redux-saga-test-plan/matchers'
 import { throwError } from 'redux-saga-test-plan/providers'
 import { call, delay, select } from 'redux-saga/effects'
-import { e164NumberSelector } from 'src/account/reducer'
+import { e164NumberSelector } from 'src/account/selectors'
 import { showError } from 'src/alert/actions'
-import CeloAnalytics from 'src/analytics/CeloAnalytics'
-import { CustomEventNames, DefaultEventNames } from 'src/analytics/constants'
+import { AppEvents, VerificationEvents } from 'src/analytics/Events'
+import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { setNumberVerified } from 'src/app/actions'
 import { ErrorMessages } from 'src/app/ErrorMessages'
 import {
   cancelVerification,
   completeAttestationCode,
+  setCompletedCodes,
   setVerificationStatus,
+  udpateVerificationState,
 } from 'src/identity/actions'
-import { attestationCodesSelector } from 'src/identity/reducer'
+import {
+  balanceSufficientForSigRetrieval,
+  fetchPhoneHashPrivate,
+} from 'src/identity/privateHashing'
+import {
+  attestationCodesSelector,
+  isVerificationStateExpiredSelector,
+  verificationStateSelector,
+} from 'src/identity/reducer'
+import { VerificationStatus } from 'src/identity/types'
 import {
   AttestationCode,
+  balanceSufficientForAttestations,
   doVerificationFlow,
+  fetchVerificationState,
+  NUM_ATTESTATIONS_REQUIRED,
   requestAndRetrieveAttestations,
   startVerification,
   VERIFICATION_TIMEOUT,
-  VerificationStatus,
 } from 'src/identity/verification'
-import { contractKit } from 'src/web3/contracts'
+import { getContractKitAsync } from 'src/web3/contracts'
 import { getConnectedAccount, getConnectedUnlockedAccount } from 'src/web3/saga'
-import { privateCommentKeySelector } from 'src/web3/selectors'
+import { dataEncryptionKeySelector } from 'src/web3/selectors'
 import { sleep } from 'test/utils'
-import { mockAccount, mockE164Number, mockPrivateDEK, mockPublicDEK } from 'test/values'
+import {
+  mockAccount,
+  mockE164Number,
+  mockE164NumberHash,
+  mockE164NumberPepper,
+  mockPrivateDEK,
+  mockPublicDEK,
+  mockVerificationStateInsufficientBalance,
+  mockVerificationStatePartlyVerified,
+  mockVerificationStateUnverified,
+  mockVerificationStateVerified,
+} from 'test/values'
 
-const MockedAnalytics = CeloAnalytics as any
+const MockedAnalytics = ValoraAnalytics as any
 
 jest.mock('src/transactions/send', () => ({
   sendTransaction: jest.fn(),
@@ -54,15 +78,6 @@ jest.mock('@celo/utils', () => {
     SignatureUtils: { parseSignature: mockParseSig, parseSignatureWithoutPrefix: mockParseSig },
   }
 })
-
-jest.mock('src/web3/contracts', () => ({
-  contractKit: {
-    contracts: {
-      getAttestations: jest.fn(),
-      getAccounts: jest.fn(),
-    },
-  },
-}))
 
 const attestationCode0: AttestationCode = {
   code:
@@ -107,12 +122,13 @@ const mockActionableAttestations: ActionableAttestation[] = [
   },
 ]
 
-const mockAttestationsWrapperVerified = {
-  getAttestationStat: jest.fn(() => ({ completed: 3, total: 3 })),
-}
-
 const mockAttestationsWrapperUnverified = {
-  getAttestationStat: jest.fn(() => ({ completed: 0, total: 0 })),
+  getVerifiedStatus: jest.fn(() => ({
+    isVerified: false,
+    numAttestationsRemaining: mockAttestationsRemainingForUnverified,
+    total: 0,
+    completed: 0,
+  })),
   getActionableAttestations: jest
     .fn()
     .mockImplementationOnce(() => [])
@@ -128,10 +144,18 @@ const mockAttestationsWrapperUnverified = {
   complete: jest.fn(() => mockContractKitTxObject),
 }
 
+const mockAttestationsRemainingForUnverified = NUM_ATTESTATIONS_REQUIRED
+const mockAttestationsRemainingForPartialVerified = 1
+
 const mockAttestationsWrapperPartlyVerified = {
   ...mockAttestationsWrapperUnverified,
-  getAttestationStat: jest.fn(() => ({ completed: 2, total: 3 })),
-  getActionableAttestations: jest.fn(() => mockActionableAttestations),
+  getVerifiedStatus: jest.fn(() => ({
+    isVerified: false,
+    numAttestationsRemaining: mockAttestationsRemainingForPartialVerified,
+    total: 3,
+    completed: 2,
+  })),
+  getActionableAttestations: jest.fn(() => [mockActionableAttestations[0]]),
 }
 
 const mockAccountsWrapper = {
@@ -139,68 +163,180 @@ const mockAccountsWrapper = {
   getDataEncryptionKey: jest.fn(() => Promise.resolve(mockPublicDEK)),
 }
 
-describe('Start Verification Saga', () => {
+describe(startVerification, () => {
   beforeEach(() => {
-    MockedAnalytics.startTracking.mockReset()
-    MockedAnalytics.stopTracking.mockReset()
     MockedAnalytics.track.mockReset()
   })
   it('tracks failure', async () => {
-    await expectSaga(startVerification)
+    await expectSaga(startVerification, { withoutRevealing: false })
       .provide([
         [call(getConnectedAccount), null],
-        [call(doVerificationFlow), false],
+        [select(isVerificationStateExpiredSelector), false],
+        [call(doVerificationFlow, false), 'This is an error message'],
       ])
+      .not.call.fn(fetchVerificationState)
       .run()
-    expect(MockedAnalytics.track.mock.calls.length).toBe(1)
-    expect(MockedAnalytics.track.mock.calls[0][0]).toBe(CustomEventNames.verification_failed)
+    expect(MockedAnalytics.track.mock.calls.length).toBe(2)
+    expect(MockedAnalytics.track.mock.calls[0][0]).toBe(VerificationEvents.verification_start)
+    expect(MockedAnalytics.track.mock.calls[1][0]).toBe(VerificationEvents.verification_error)
   })
 
   it('times out when verification takes too long', async () => {
-    await expectSaga(startVerification)
+    await expectSaga(startVerification, { withoutRevealing: false })
       .provide([
         [call(getConnectedAccount), null],
-        [call(doVerificationFlow), sleep(1500)],
+        [select(isVerificationStateExpiredSelector), false],
+        [call(doVerificationFlow, false), sleep(1500)],
         [delay(VERIFICATION_TIMEOUT), 1000],
       ])
       .run(2000)
-    expect(MockedAnalytics.track.mock.calls.length).toBe(2)
-    expect(MockedAnalytics.track.mock.calls[0][0]).toBe(CustomEventNames.verification_timed_out)
-    expect(MockedAnalytics.track.mock.calls[1][0]).toBe(DefaultEventNames.errorDisplayed)
+    expect(MockedAnalytics.track.mock.calls.length).toBe(3)
+    expect(MockedAnalytics.track.mock.calls[0][0]).toBe(VerificationEvents.verification_start)
+    expect(MockedAnalytics.track.mock.calls[1][0]).toBe(VerificationEvents.verification_timeout)
+    expect(MockedAnalytics.track.mock.calls[2][0]).toBe(AppEvents.error_displayed)
   })
 
   it('stops when the user cancels', async () => {
-    await expectSaga(startVerification)
+    await expectSaga(startVerification, { withoutRevealing: false })
       .provide([
         [call(getConnectedAccount), null],
-        [call(doVerificationFlow), sleep(1500)],
+        [select(isVerificationStateExpiredSelector), false],
+        [call(doVerificationFlow, false), sleep(1500)],
       ])
       .dispatch(cancelVerification())
       .run(2000)
-    expect(MockedAnalytics.track.mock.calls.length).toBe(1)
-    expect(MockedAnalytics.track.mock.calls[0][0]).toBe(CustomEventNames.verification_cancelled)
+    expect(MockedAnalytics.track.mock.calls.length).toBe(2)
+    expect(MockedAnalytics.track.mock.calls[0][0]).toBe(VerificationEvents.verification_start)
+    expect(MockedAnalytics.track.mock.calls[1][0]).toBe(VerificationEvents.verification_cancel)
+  })
+
+  it('call fetchVerificationState when verificationState is expired ', async () => {
+    await expectSaga(startVerification, { withoutRevealing: false })
+      .provide([
+        [call(getConnectedAccount), null],
+        [select(isVerificationStateExpiredSelector), true],
+        [call(doVerificationFlow, false), true],
+        // [call(fetchVerificationState), true],
+        // [matchers.call.fn(fetchVerificationState), fetchVerificationStateMock],
+      ])
+      .call.fn(fetchVerificationState)
+      .run()
   })
 })
 
-describe('Do Verification Saga', () => {
-  it('succeeds for unverified users', async () => {
-    await expectSaga(doVerificationFlow)
+describe(fetchVerificationState, () => {
+  it('fetches unverified', async () => {
+    const contractKit = await getContractKitAsync()
+    await expectSaga(fetchVerificationState)
       .provide([
         [call(getConnectedUnlockedAccount), mockAccount],
-        [select(privateCommentKeySelector), mockPrivateDEK.toString('hex')],
+        [select(e164NumberSelector), mockE164Number],
         [
           call([contractKit.contracts, contractKit.contracts.getAttestations]),
           mockAttestationsWrapperUnverified,
         ],
         [call([contractKit.contracts, contractKit.contracts.getAccounts]), mockAccountsWrapper],
+        [
+          call(fetchPhoneHashPrivate, mockE164Number),
+          {
+            phoneHash: mockE164NumberHash,
+            e164Number: mockE164Number,
+            pepper: mockE164NumberPepper,
+          },
+        ],
+        [select(dataEncryptionKeySelector), mockPrivateDEK],
+        [call(balanceSufficientForSigRetrieval), true],
+        [call(balanceSufficientForAttestations, 3), true],
+      ])
+      .put(setVerificationStatus(VerificationStatus.GettingStatus))
+      .put(udpateVerificationState(mockVerificationStateUnverified))
+      .run()
+  })
+
+  it('fetches partly verified', async () => {
+    const contractKit = await getContractKitAsync()
+    await expectSaga(fetchVerificationState)
+      .provide([
+        [call(getConnectedUnlockedAccount), mockAccount],
         [select(e164NumberSelector), mockE164Number],
+        [
+          call([contractKit.contracts, contractKit.contracts.getAttestations]),
+          mockAttestationsWrapperPartlyVerified,
+        ],
+        [call([contractKit.contracts, contractKit.contracts.getAccounts]), mockAccountsWrapper],
+        [
+          call(fetchPhoneHashPrivate, mockE164Number),
+          {
+            phoneHash: mockE164NumberHash,
+            e164Number: mockE164Number,
+            pepper: mockE164NumberPepper,
+          },
+        ],
+        [select(dataEncryptionKeySelector), mockPrivateDEK],
+        [call(balanceSufficientForSigRetrieval), true],
+        [call(balanceSufficientForAttestations, 0), true],
+      ])
+      .put(setVerificationStatus(VerificationStatus.GettingStatus))
+      .put(
+        udpateVerificationState({
+          ...mockVerificationStatePartlyVerified,
+          actionableAttestations: [mockActionableAttestations[0]],
+        })
+      )
+      .run()
+  })
+
+  it('catches insufficient balance for for sig retrieval', async () => {
+    const contractKit = await getContractKitAsync()
+    await expectSaga(fetchVerificationState)
+      .provide([
+        [call(getConnectedUnlockedAccount), mockAccount],
+        [select(e164NumberSelector), mockE164Number],
+        [
+          call([contractKit.contracts, contractKit.contracts.getAttestations]),
+          mockAttestationsWrapperUnverified,
+        ],
+        [call([contractKit.contracts, contractKit.contracts.getAccounts]), mockAccountsWrapper],
+        [
+          call(fetchPhoneHashPrivate, mockE164Number),
+          { phoneHash: mockE164NumberHash, e164Number: mockE164Number },
+        ],
+        [select(dataEncryptionKeySelector), mockPrivateDEK],
+        [call(balanceSufficientForSigRetrieval), false],
+        [select(verificationStateSelector), mockVerificationStateUnverified],
+      ])
+      .put(
+        udpateVerificationState({
+          ...mockVerificationStateUnverified,
+          isBalanceSufficient: false,
+        })
+      )
+      .run()
+  })
+})
+
+describe(doVerificationFlow, () => {
+  it('succeeds for unverified users', async () => {
+    const contractKit = await getContractKitAsync()
+    await expectSaga(doVerificationFlow)
+      .provide([
+        [select(verificationStateSelector), mockVerificationStateUnverified],
+        [call(getConnectedUnlockedAccount), mockAccount],
+        [
+          call([contractKit.contracts, contractKit.contracts.getAttestations]),
+          mockAttestationsWrapperUnverified,
+        ],
         [select(attestationCodesSelector), attestationCodes],
         [select(attestationCodesSelector), attestationCodes],
         [select(attestationCodesSelector), attestationCodes],
       ])
-      .put(completeAttestationCode())
-      .put(completeAttestationCode())
-      .put(completeAttestationCode())
+      .put(setVerificationStatus(VerificationStatus.Prepping))
+      .put(setCompletedCodes(0))
+      .put(setVerificationStatus(VerificationStatus.RequestingAttestations))
+      .put(setVerificationStatus(VerificationStatus.RevealingNumber))
+      .put(completeAttestationCode(attestationCode0))
+      .put(completeAttestationCode(attestationCode1))
+      .put(completeAttestationCode(attestationCode2))
       .put(setVerificationStatus(VerificationStatus.Done))
       .put(setNumberVerified(true))
       .returns(true)
@@ -208,19 +344,19 @@ describe('Do Verification Saga', () => {
   })
 
   it('succeeds for partly verified users', async () => {
+    const contractKit = await getContractKitAsync()
     await expectSaga(doVerificationFlow)
       .provide([
+        [select(verificationStateSelector), mockVerificationStatePartlyVerified],
         [call(getConnectedUnlockedAccount), mockAccount],
-        [select(privateCommentKeySelector), mockPrivateDEK.toString('hex')],
         [
           call([contractKit.contracts, contractKit.contracts.getAttestations]),
           mockAttestationsWrapperPartlyVerified,
         ],
-        [call([contractKit.contracts, contractKit.contracts.getAccounts]), mockAccountsWrapper],
-        [select(e164NumberSelector), mockE164Number],
         [select(attestationCodesSelector), attestationCodes],
       ])
-      .put(completeAttestationCode())
+      .put(setCompletedCodes(2))
+      .put(completeAttestationCode(attestationCode0))
       .put(setVerificationStatus(VerificationStatus.Done))
       .put(setNumberVerified(true))
       .returns(true)
@@ -229,36 +365,45 @@ describe('Do Verification Saga', () => {
 
   it('succeeds for verified users', async () => {
     await expectSaga(doVerificationFlow)
-      .provide([
-        [call(getConnectedUnlockedAccount), mockAccount],
-        [select(privateCommentKeySelector), mockPrivateDEK.toString('hex')],
-        [
-          call([contractKit.contracts, contractKit.contracts.getAttestations]),
-          mockAttestationsWrapperVerified,
-        ],
-        [select(e164NumberSelector), mockE164Number],
-      ])
+      .provide([[select(verificationStateSelector), mockVerificationStateVerified]])
+      .put(setVerificationStatus(VerificationStatus.Prepping))
       .put(setVerificationStatus(VerificationStatus.Done))
       .put(setNumberVerified(true))
       .returns(true)
       .run()
   })
 
-  it('shows error on unexpected failure', async () => {
+  it('shows error for insufficient balance', async () => {
+    const contractKit = await getContractKitAsync()
     await expectSaga(doVerificationFlow)
       .provide([
+        [select(verificationStateSelector), mockVerificationStateInsufficientBalance],
         [call(getConnectedUnlockedAccount), mockAccount],
-        [select(privateCommentKeySelector), mockPrivateDEK.toString('hex')],
+        [
+          call([contractKit.contracts, contractKit.contracts.getAttestations]),
+          mockAttestationsWrapperPartlyVerified,
+        ],
+      ])
+      .put(setVerificationStatus(VerificationStatus.Prepping))
+      .put(setVerificationStatus(VerificationStatus.InsufficientBalance))
+      .run()
+  })
+
+  it('shows error on unexpected failure', async () => {
+    const contractKit = await getContractKitAsync()
+    await expectSaga(doVerificationFlow)
+      .provide([
+        [select(verificationStateSelector), mockVerificationStateUnverified],
+        [call(getConnectedUnlockedAccount), mockAccount],
         [
           call([contractKit.contracts, contractKit.contracts.getAttestations]),
           mockAttestationsWrapperUnverified,
         ],
-        [select(e164NumberSelector), mockE164Number],
         [matchers.call.fn(requestAndRetrieveAttestations), throwError(new Error('fake error'))],
       ])
       .put(showError(ErrorMessages.VERIFICATION_FAILURE))
       .put(setVerificationStatus(VerificationStatus.Failed))
-      .returns(false)
+      .returns('fake error')
       .run()
   })
 
@@ -268,21 +413,22 @@ describe('Do Verification Saga', () => {
       revealPhoneNumberToIssuer: jest.fn(() => {
         throw new Error('Reveal error')
       }),
+      getActionableAttestations: jest.fn(() => mockActionableAttestations),
     }
+    const contractKit = await getContractKitAsync()
 
     await expectSaga(doVerificationFlow)
       .provide([
+        [select(verificationStateSelector), mockVerificationStateUnverified],
         [call(getConnectedUnlockedAccount), mockAccount],
-        [select(privateCommentKeySelector), mockPrivateDEK.toString('hex')],
         [
           call([contractKit.contracts, contractKit.contracts.getAttestations]),
           mockAttestationsWrapperRevealFailure,
         ],
-        [call([contractKit.contracts, contractKit.contracts.getAccounts]), mockAccountsWrapper],
-        [select(e164NumberSelector), mockE164Number],
+        [select(attestationCodesSelector), attestationCodes],
+        [select(attestationCodesSelector), attestationCodes],
         [select(attestationCodesSelector), attestationCodes],
       ])
-      .put(showError(ErrorMessages.REVEAL_ATTESTATION_FAILURE))
       .put(setVerificationStatus(VerificationStatus.RevealAttemptFailed))
       .run()
   })

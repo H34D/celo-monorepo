@@ -1,5 +1,4 @@
 import TextInput from '@celo/react-components/components/TextInput'
-import colors from '@celo/react-components/styles/colors'
 import fontStyles from '@celo/react-components/styles/fonts'
 import variables from '@celo/react-components/styles/variables'
 import * as React from 'react'
@@ -7,16 +6,13 @@ import { WithTranslation } from 'react-i18next'
 import { ScrollView, StyleSheet } from 'react-native'
 import { connect } from 'react-redux'
 import { setName } from 'src/account/actions'
-import CeloAnalytics from 'src/analytics/CeloAnalytics'
-import { CustomEventNames } from 'src/analytics/constants'
+import { SettingsEvents } from 'src/analytics/Events'
+import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { Namespaces, withTranslation } from 'src/i18n'
-import { headerWithBackButton } from 'src/navigator/Headers'
-import { navigate } from 'src/navigator/NavigationService'
-import { Screens } from 'src/navigator/Screens'
 import { RootState } from 'src/redux/reducers'
 
 interface StateProps {
-  name: string
+  name: string | null
 }
 
 interface DispatchProps {
@@ -31,25 +27,22 @@ const mapStateToProps = (state: RootState): StateProps => {
   }
 }
 
-export class EditProfile extends React.Component<Props> {
-  static navigationOptions = headerWithBackButton
+interface State {
+  name: string
+}
 
-  state = {
-    name: this.props.name,
+export class EditProfile extends React.Component<Props, State> {
+  state: State = {
+    name: this.props.name || '',
   }
 
   nameValueChange = (name: string) => {
     this.setState({ name })
   }
 
-  onEndEditing = () => {
-    CeloAnalytics.track(CustomEventNames.edit_name_input)
-  }
-
   nameSubmitted = () => {
     this.props.setName(this.state.name)
-    CeloAnalytics.track(CustomEventNames.edit_name_submit)
-    navigate(Screens.Account)
+    ValoraAnalytics.track(SettingsEvents.settings_profile_name_edit)
   }
 
   render() {
@@ -65,7 +58,6 @@ export class EditProfile extends React.Component<Props> {
           value={this.state.name}
           onSubmitEditing={this.nameSubmitted}
           onChangeText={this.nameValueChange}
-          onEndEditing={this.onEndEditing}
         />
       </ScrollView>
     )
@@ -85,10 +77,9 @@ const style = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: colors.background,
   },
 })
 
 export default connect<StateProps, DispatchProps, {}, RootState>(mapStateToProps, {
   setName,
-})(withTranslation(Namespaces.accountScreen10)(EditProfile))
+})(withTranslation<Props>(Namespaces.accountScreen10)(EditProfile))

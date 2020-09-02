@@ -1,10 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`BackupSocialIntro renders correctly when social backup is complete 1`] = `
-<SafeAreaView
+<RNCSafeAreaView
   style={
     Object {
-      "backgroundColor": "#FFFFFF",
       "flex": 1,
       "justifyContent": "space-between",
     }
@@ -61,9 +60,10 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
               style={
                 Object {
                   "color": "#2E3338",
-                  "fontFamily": "Hind-SemiBold",
+                  "fontFamily": "Inter-Medium",
                   "fontSize": 16,
-                  "lineHeight": 24,
+                  "lineHeight": 22,
+                  "marginBottom": 8,
                 }
               }
             >
@@ -72,7 +72,6 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
             <View
               accessible={true}
               focusable={true}
-              isTVSelectable={true}
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackgroundBorderless",
@@ -90,8 +89,8 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
               <Text
                 style={
                   Object {
-                    "color": "#42D689",
-                    "fontFamily": "Hind-SemiBold",
+                    "color": "#2E3338",
+                    "fontFamily": "Inter-Regular",
                     "fontSize": 16,
                     "lineHeight": 22,
                   }
@@ -105,11 +104,11 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
             style={
               Object {
                 "alignContent": "center",
-                "backgroundColor": "#EEEEEE",
+                "backgroundColor": "#F1F0EB",
                 "borderRadius": 4,
                 "justifyContent": "center",
-                "marginTop": 10,
-                "padding": 14,
+                "marginTop": 8,
+                "padding": 16,
               }
             }
           />
@@ -134,9 +133,10 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
               style={
                 Object {
                   "color": "#2E3338",
-                  "fontFamily": "Hind-SemiBold",
+                  "fontFamily": "Inter-Medium",
                   "fontSize": 16,
-                  "lineHeight": 24,
+                  "lineHeight": 22,
+                  "marginBottom": 8,
                 }
               }
             >
@@ -145,7 +145,6 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
             <View
               accessible={true}
               focusable={true}
-              isTVSelectable={true}
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackgroundBorderless",
@@ -163,8 +162,8 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
               <Text
                 style={
                   Object {
-                    "color": "#42D689",
-                    "fontFamily": "Hind-SemiBold",
+                    "color": "#2E3338",
+                    "fontFamily": "Inter-Regular",
                     "fontSize": 16,
                     "lineHeight": 22,
                   }
@@ -178,11 +177,11 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
             style={
               Object {
                 "alignContent": "center",
-                "backgroundColor": "#EEEEEE",
+                "backgroundColor": "#F1F0EB",
                 "borderRadius": 4,
                 "justifyContent": "center",
-                "marginTop": 10,
-                "padding": 14,
+                "marginTop": 8,
+                "padding": 16,
               }
             }
           />
@@ -190,14 +189,13 @@ exports[`BackupSocialIntro renders correctly when social backup is complete 1`] 
       </View>
     </View>
   </RCTScrollView>
-</SafeAreaView>
+</RNCSafeAreaView>
 `;
 
 exports[`BackupSocialIntro renders correctly when social backup is not complete 1`] = `
-<SafeAreaView
+<RNCSafeAreaView
   style={
     Object {
-      "backgroundColor": "#FFFFFF",
       "flex": 1,
       "justifyContent": "space-between",
     }
@@ -254,9 +252,10 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
               style={
                 Object {
                   "color": "#2E3338",
-                  "fontFamily": "Hind-SemiBold",
+                  "fontFamily": "Inter-Medium",
                   "fontSize": 16,
-                  "lineHeight": 24,
+                  "lineHeight": 22,
+                  "marginBottom": 8,
                 }
               }
             >
@@ -265,7 +264,6 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
             <View
               accessible={true}
               focusable={true}
-              isTVSelectable={true}
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackgroundBorderless",
@@ -283,8 +281,8 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
               <Text
                 style={
                   Object {
-                    "color": "#42D689",
-                    "fontFamily": "Hind-SemiBold",
+                    "color": "#2E3338",
+                    "fontFamily": "Inter-Regular",
                     "fontSize": 16,
                     "lineHeight": 22,
                   }
@@ -298,11 +296,11 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
             style={
               Object {
                 "alignContent": "center",
-                "backgroundColor": "#EEEEEE",
+                "backgroundColor": "#F1F0EB",
                 "borderRadius": 4,
                 "justifyContent": "center",
-                "marginTop": 10,
-                "padding": 14,
+                "marginTop": 8,
+                "padding": 16,
               }
             }
           />
@@ -327,9 +325,10 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
               style={
                 Object {
                   "color": "#2E3338",
-                  "fontFamily": "Hind-SemiBold",
+                  "fontFamily": "Inter-Medium",
                   "fontSize": 16,
-                  "lineHeight": 24,
+                  "lineHeight": 22,
+                  "marginBottom": 8,
                 }
               }
             >
@@ -338,7 +337,6 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
             <View
               accessible={true}
               focusable={true}
-              isTVSelectable={true}
               nativeBackgroundAndroid={
                 Object {
                   "attribute": "selectableItemBackgroundBorderless",
@@ -356,8 +354,8 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
               <Text
                 style={
                   Object {
-                    "color": "#42D689",
-                    "fontFamily": "Hind-SemiBold",
+                    "color": "#2E3338",
+                    "fontFamily": "Inter-Regular",
                     "fontSize": 16,
                     "lineHeight": 22,
                   }
@@ -371,11 +369,11 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
             style={
               Object {
                 "alignContent": "center",
-                "backgroundColor": "#EEEEEE",
+                "backgroundColor": "#F1F0EB",
                 "borderRadius": 4,
                 "justifyContent": "center",
-                "marginTop": 10,
-                "padding": 14,
+                "marginTop": 8,
+                "padding": 16,
               }
             }
           />
@@ -390,16 +388,16 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
         }
       >
         <AndroidSwitch
-          accessibilityRole="button"
+          accessibilityRole="switch"
           enabled={true}
           on={false}
           onChange={[Function]}
           onResponderTerminationRequest={[Function]}
           onStartShouldSetResponder={[Function]}
           thumbTintColor="#FFFFFF"
-          trackColorForFalse="#D1D5D8"
+          trackColorForFalse="#9CA4A9"
           trackColorForTrue="#42D689"
-          trackTintColor="#D1D5D8"
+          trackTintColor="#9CA4A9"
         />
         <Text
           style={
@@ -431,7 +429,7 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
         null,
         undefined,
         Object {
-          "backgroundColor": "#A3EBC6",
+          "backgroundColor": "#97DFC1",
         },
       ]
     }
@@ -439,7 +437,6 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
     <View
       accessible={true}
       focusable={false}
-      isTVSelectable={true}
       nativeBackgroundAndroid={
         Object {
           "attribute": "selectableItemBackground",
@@ -461,7 +458,7 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
             "justifyContent": "center",
           },
           Object {
-            "backgroundColor": "#A3EBC6",
+            "backgroundColor": "#97DFC1",
           },
           Object {
             "height": 50,
@@ -504,5 +501,5 @@ exports[`BackupSocialIntro renders correctly when social backup is not complete 
       </View>
     </View>
   </View>
-</SafeAreaView>
+</RNCSafeAreaView>
 `;

@@ -1,20 +1,25 @@
 import Button, { BtnTypes } from '@celo/react-components/components/Button'
+import HorizontalLine from '@celo/react-components/components/HorizontalLine'
 import ReviewFrame from '@celo/react-components/components/ReviewFrame'
 import ReviewHeader from '@celo/react-components/components/ReviewHeader'
 import colors from '@celo/react-components/styles/colors'
-import { CURRENCY_ENUM } from '@celo/utils/src/currencies'
+import { CURRENCIES, CURRENCY_ENUM } from '@celo/utils/src/currencies'
+import { StackScreenProps } from '@react-navigation/stack'
 import BigNumber from 'bignumber.js'
 import * as React from 'react'
 import { WithTranslation } from 'react-i18next'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import SafeAreaView from 'react-native-safe-area-view'
-import { NavigationInjectedProps } from 'react-navigation'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { connect } from 'react-redux'
 import { hideAlert, showError } from 'src/alert/actions'
-import CeloAnalytics from 'src/analytics/CeloAnalytics'
-import { CustomEventNames } from 'src/analytics/constants'
-import componentWithAnalytics from 'src/analytics/wrapper'
-import { TokenTransactionType } from 'src/apollo/types'
+import Avatar from 'src/components/Avatar'
+import CurrencyDisplay, { DisplayType, FormatType } from 'src/components/CurrencyDisplay'
+import { SecurityFeeIcon } from 'src/components/FeeIcon'
+import LineItemRow from 'src/components/LineItemRow.v2'
+import TotalLineItem from 'src/components/TotalLineItem.v2'
+import { FeeType } from 'src/fees/actions'
+import CalculateFee from 'src/fees/CalculateFee'
+import { getFeeDollars } from 'src/fees/selectors'
 import GethAwareButton from 'src/geth/GethAwareButton'
 import { Namespaces, withTranslation } from 'src/i18n'
 import SMSLogo from 'src/icons/InviteSendReceive'
@@ -22,21 +27,20 @@ import WhatsAppLogo from 'src/icons/WhatsAppLogo'
 import { InviteBy, sendInvite } from 'src/invite/actions'
 import { getInvitationVerificationFeeInDollars } from 'src/invite/saga'
 import { navigateBack } from 'src/navigator/NavigationService'
-import { Recipient } from 'src/recipients/recipient'
+import { Screens } from 'src/navigator/Screens'
+import { StackParamList } from 'src/navigator/types'
 import { RootState } from 'src/redux/reducers'
-import TransferReviewCard from 'src/send/TransferReviewCard'
 import { fetchDollarBalance } from 'src/stableToken/actions'
+import { currentAccountSelector } from 'src/web3/selectors'
 
 interface State {
   amountIsValid: boolean
 }
 
-type Props = StateProps & DispatchProps & NavigationInjectedProps & WithTranslation
-
 interface StateProps {
+  account: string | null
   inviteInProgress: boolean
   dollarBalance: string
-  defaultCountryCode: string
 }
 
 interface DispatchProps {
@@ -46,10 +50,14 @@ interface DispatchProps {
   hideAlert: typeof hideAlert
 }
 
+type OwnProps = StackScreenProps<StackParamList, Screens.InviteReview>
+
+type Props = StateProps & DispatchProps & WithTranslation & OwnProps
+
 const mapStateToProps = (state: RootState): StateProps => ({
+  account: currentAccountSelector(state),
   inviteInProgress: state.invite.isSendingInvite,
   dollarBalance: state.stableToken.balance || '0',
-  defaultCountryCode: state.account.defaultCountryCode,
 })
 
 const mapDispatchToProps = {
@@ -73,8 +81,8 @@ export class InviteReview extends React.Component<Props, State> {
     this.checkIfEnoughFundsAreAvailable()
   }
 
-  getRecipient = (): Recipient => {
-    const recipient = this.props.navigation.getParam('recipient')
+  getRecipient = () => {
+    const recipient = this.props.route.params.recipient
     if (!recipient) {
       throw new Error('Recipient expected')
     }
@@ -89,12 +97,10 @@ export class InviteReview extends React.Component<Props, State> {
   }
 
   onInviteSMS = async () => {
-    CeloAnalytics.track(CustomEventNames.invite_friends_sms)
     await this.onInvite(InviteBy.SMS)
   }
 
   onInviteWhatsApp = async () => {
-    CeloAnalytics.track(CustomEventNames.invite_friends_whatsapp)
     await this.onInvite(InviteBy.WhatsApp)
   }
 
@@ -112,11 +118,10 @@ export class InviteReview extends React.Component<Props, State> {
       throw new Error("Can't send to recipient without valid e164 number")
     }
 
-    this.props.sendInvite(recipient.displayName, recipient.e164PhoneNumber, inviteMode)
+    this.props.sendInvite(recipient.e164PhoneNumber, inviteMode)
   }
 
   onEdit = () => {
-    CeloAnalytics.track(CustomEventNames.invite_edit)
     navigateBack()
   }
 
@@ -158,8 +163,8 @@ export class InviteReview extends React.Component<Props, State> {
           disabled={inviteInProgress}
         />
         {inviteInProgress && (
-          <View style={style.loadingIcon}>
-            <ActivityIndicator size="large" color={colors.celoGreen} />
+          <View style={styles.loadingIcon}>
+            <ActivityIndicator size="large" color={colors.greenBrand} />
           </View>
         )}
       </View>
@@ -167,28 +172,99 @@ export class InviteReview extends React.Component<Props, State> {
   }
 
   render() {
+    const { account, t } = this.props
+    if (!account) {
+      throw Error('Account is required')
+    }
+
     const recipient = this.getRecipient()
+    const inviteFee = getInvitationVerificationFeeInDollars()
+
+    const inviteFeeAmount = {
+      value: inviteFee,
+      currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
+    }
+
     return (
-      <SafeAreaView style={style.container}>
+      <SafeAreaView style={styles.container}>
         <ReviewFrame HeaderComponent={this.renderHeader} FooterComponent={this.renderFooter}>
-          <TransferReviewCard
-            recipient={recipient}
-            type={TokenTransactionType.InviteSent}
-            address={recipient.address}
-            value={getInvitationVerificationFeeInDollars()}
-            e164PhoneNumber={recipient.e164PhoneNumber}
-            currency={CURRENCY_ENUM.DOLLAR}
-            fee={new BigNumber(0)}
-          />
+          <CalculateFee
+            feeType={FeeType.INVITE}
+            account={account}
+            amount={new BigNumber(0)}
+            comment=""
+          >
+            {(asyncFee) => {
+              const fee = getFeeDollars(asyncFee.result)
+              const securityFee = fee ? fee.minus(inviteFee) : fee
+              const securityFeeAmount = securityFee && {
+                value: securityFee,
+                currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
+              }
+
+              const totalAmount = {
+                value: fee || 0,
+                currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
+              }
+
+              return (
+                <View>
+                  <Avatar
+                    recipient={recipient}
+                    address={recipient.address}
+                    e164Number={recipient.e164PhoneNumber}
+                  />
+                  <CurrencyDisplay
+                    type={DisplayType.Big}
+                    style={styles.amount}
+                    amount={inviteFeeAmount}
+                  />
+                  <View style={styles.bottomContainer}>
+                    <HorizontalLine />
+                    <LineItemRow
+                      title={t('inviteFee')}
+                      amount={<CurrencyDisplay amount={inviteFeeAmount} />}
+                    />
+                    <LineItemRow
+                      title={t('sendFlow7:securityFee')}
+                      titleIcon={<SecurityFeeIcon />}
+                      amount={
+                        securityFeeAmount && (
+                          <CurrencyDisplay amount={securityFeeAmount} formatType={FormatType.Fee} />
+                        )
+                      }
+                      isLoading={asyncFee.loading}
+                      hasError={!!asyncFee.error}
+                    />
+                    <HorizontalLine />
+                    <TotalLineItem amount={totalAmount} />
+                  </View>
+                </View>
+              )
+            }}
+          </CalculateFee>
         </ReviewFrame>
       </SafeAreaView>
     )
   }
 }
 
-const style = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'flex-start',
+    paddingBottom: 25,
+  },
+  editContainer: {
+    flexDirection: 'row',
+  },
+  bottomContainer: {
+    marginTop: 5,
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  amount: {
+    marginTop: 15,
   },
   loadingIcon: {
     position: 'absolute',
@@ -198,13 +274,11 @@ const style = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.light,
   },
 })
 
-export default componentWithAnalytics(
-  connect<StateProps, DispatchProps, {}, RootState>(
-    mapStateToProps,
-    mapDispatchToProps
-  )(withTranslation(Namespaces.inviteFlow11)(InviteReview))
-)
+export default connect<StateProps, DispatchProps, OwnProps, RootState>(
+  mapStateToProps,
+  mapDispatchToProps
+)(withTranslation<Props>(Namespaces.inviteFlow11)(InviteReview))

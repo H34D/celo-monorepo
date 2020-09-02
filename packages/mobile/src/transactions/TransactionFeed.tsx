@@ -1,21 +1,25 @@
-import ItemSeparator from '@celo/react-components/components/ItemSeparator'
 import { ApolloError } from 'apollo-boost'
 import gql from 'graphql-tag'
 import * as React from 'react'
 import { FlatList } from 'react-native'
 import { connect } from 'react-redux'
 import { TransactionFeedFragment } from 'src/apollo/types'
+import { CURRENCIES, CURRENCY_ENUM } from 'src/geth/consts'
 import { AddressToE164NumberType } from 'src/identity/reducer'
-import { Invitees } from 'src/invite/actions'
+import { InviteDetails } from 'src/invite/actions'
+import { inviteesSelector } from 'src/invite/reducer'
 import { NumberToRecipient } from 'src/recipients/recipient'
 import { recipientCacheSelector } from 'src/recipients/reducer'
 import { RootState } from 'src/redux/reducers'
+import CeloTransferFeedItem from 'src/transactions/CeloTransferFeedItem'
 import ExchangeFeedItem from 'src/transactions/ExchangeFeedItem'
+import GoldTransactionFeedItem from 'src/transactions/GoldTransactionFeedItem'
 import NoActivity from 'src/transactions/NoActivity'
-import { TransactionStatus } from 'src/transactions/reducer'
+import { recentTxRecipientsCacheSelector } from 'src/transactions/reducer'
 import TransferFeedItem from 'src/transactions/TransferFeedItem'
+import { TransactionStatus } from 'src/transactions/types'
 import Logger from 'src/utils/Logger'
-import { privateCommentKeySelector } from 'src/web3/selectors'
+import { dataEncryptionKeySelector } from 'src/web3/selectors'
 
 const TAG = 'transactions/TransactionFeed'
 
@@ -25,10 +29,11 @@ export enum FeedType {
 }
 
 interface StateProps {
-  invitees: Invitees
-  commentKey: string | null | undefined
+  commentKey: string | null
   addressToE164Number: AddressToE164NumberType
   recipientCache: NumberToRecipient
+  recentTxRecipientsCache: NumberToRecipient
+  invitees: InviteDetails[]
 }
 
 export type FeedItem = TransactionFeedFragment & {
@@ -43,10 +48,11 @@ type Props = {
 } & StateProps
 
 const mapStateToProps = (state: RootState): StateProps => ({
-  invitees: state.invite.invitees,
-  commentKey: privateCommentKeySelector(state),
+  commentKey: dataEncryptionKeySelector(state),
   addressToE164Number: state.identity.addressToE164Number,
   recipientCache: recipientCacheSelector(state),
+  recentTxRecipientsCache: recentTxRecipientsCacheSelector(state),
+  invitees: inviteesSelector(state),
 })
 
 export class TransactionFeed extends React.PureComponent<Props> {
@@ -62,30 +68,39 @@ export class TransactionFeed extends React.PureComponent<Props> {
     `,
   }
 
-  renderItem = (commentKeyBuffer: Buffer | null) => ({
-    item: tx,
-  }: {
-    item: FeedItem
-    index: number
-  }) => {
-    const { addressToE164Number, invitees, recipientCache } = this.props
+  renderItem = ({ item: tx }: { item: FeedItem; index: number }) => {
+    const {
+      addressToE164Number,
+      recipientCache,
+      recentTxRecipientsCache,
+      invitees,
+      commentKey,
+      kind,
+    } = this.props
 
     switch (tx.__typename) {
       case 'TokenTransfer':
-        return (
-          <TransferFeedItem
-            invitees={invitees}
-            addressToE164Number={addressToE164Number}
-            recipientCache={recipientCache}
-            commentKey={commentKeyBuffer}
-            {...tx}
-          />
-        )
+        if (tx.amount.currencyCode === CURRENCIES[CURRENCY_ENUM.GOLD].code) {
+          return <CeloTransferFeedItem {...tx} />
+        } else {
+          return (
+            <TransferFeedItem
+              addressToE164Number={addressToE164Number}
+              recipientCache={recipientCache}
+              recentTxRecipientsCache={recentTxRecipientsCache}
+              invitees={invitees}
+              commentKey={commentKey}
+              {...tx}
+            />
+          )
+        }
       case 'TokenExchange':
-        return <ExchangeFeedItem {...tx} />
+        if (kind === FeedType.HOME) {
+          return <ExchangeFeedItem {...tx} />
+        } else {
+          return <GoldTransactionFeedItem {...tx} />
+        }
     }
-
-    return <React.Fragment />
   }
 
   keyExtractor = (item: TransactionFeedFragment) => {
@@ -93,24 +108,15 @@ export class TransactionFeed extends React.PureComponent<Props> {
   }
 
   render() {
-    const { kind, loading, error, data, commentKey } = this.props
+    const { kind, loading, error, data } = this.props
 
     if (error) {
       Logger.error(TAG, 'Failure while loading transaction feed', error)
       return <NoActivity kind={kind} loading={loading} error={error} />
     }
 
-    const commentKeyBuffer = commentKey ? Buffer.from(commentKey, 'hex') : null
-
     if (data && data.length > 0) {
-      return (
-        <FlatList
-          data={data}
-          keyExtractor={this.keyExtractor}
-          ItemSeparatorComponent={ItemSeparator}
-          renderItem={this.renderItem(commentKeyBuffer)}
-        />
-      )
+      return <FlatList data={data} keyExtractor={this.keyExtractor} renderItem={this.renderItem} />
     } else {
       return <NoActivity kind={kind} loading={loading} error={error} />
     }

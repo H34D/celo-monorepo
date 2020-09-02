@@ -1,10 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Debug renders correctly 1`] = `
-<SafeAreaView
+<RNCSafeAreaView
   style={
     Object {
-      "backgroundColor": "#FFFFFF",
       "flex": 1,
       "justifyContent": "space-between",
       "paddingHorizontal": 10,
@@ -32,7 +31,7 @@ exports[`Debug renders correctly 1`] = `
       }
     }
   >
-    Version: undefined | Build Number: undefined | Api Level: undefined
+    Version: appVersion | Build Number: undefined | Api Level: undefined
   </Text>
   <Text
     style={
@@ -159,7 +158,6 @@ exports[`Debug renders correctly 1`] = `
     <View
       accessible={true}
       focusable={true}
-      isTVSelectable={true}
       nativeBackgroundAndroid={
         Object {
           "attribute": "selectableItemBackground",
@@ -226,5 +224,5 @@ exports[`Debug renders correctly 1`] = `
       </View>
     </View>
   </View>
-</SafeAreaView>
+</RNCSafeAreaView>
 `;

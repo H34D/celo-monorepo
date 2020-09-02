@@ -1,24 +1,28 @@
 import { CeloTransactionObject } from '@celo/contractkit'
-import { AccountsWrapper } from '@celo/contractkit/lib/wrappers/Accounts'
+import { PhoneNumberHashDetails } from '@celo/contractkit/lib/identity/odis/phone-number-identifier'
 import {
   ActionableAttestation,
+  AttesationServiceRevealRequest,
   AttestationsWrapper,
   UnselectedRequest,
 } from '@celo/contractkit/lib/wrappers/Attestations'
-import { eqAddress } from '@celo/utils/src/address'
 import { retryAsync } from '@celo/utils/src/async'
-import { extractAttestationCodeFromMessage } from '@celo/utils/src/attestations'
-import { compressedPubKey } from '@celo/utils/src/commentEncryption'
-import { TxPromises } from '@celo/walletkit'
+import { AttestationsStatus, extractAttestationCodeFromMessage } from '@celo/utils/src/attestations'
+import { getPhoneHash } from '@celo/utils/src/phoneNumbers'
+import functions from '@react-native-firebase/functions'
+import BigNumber from 'bignumber.js'
 import { Platform } from 'react-native'
 import { Task } from 'redux-saga'
 import { all, call, delay, fork, put, race, select, take, takeEvery } from 'redux-saga/effects'
-import { e164NumberSelector } from 'src/account/reducer'
-import { showError, showMessage } from 'src/alert/actions'
-import CeloAnalytics from 'src/analytics/CeloAnalytics'
-import { CustomEventNames } from 'src/analytics/constants'
+import { setRetryVerificationWithForno } from 'src/account/actions'
+import { e164NumberSelector } from 'src/account/selectors'
+import { showError, showErrorOrFallback } from 'src/alert/actions'
+import { VerificationEvents } from 'src/analytics/Events'
+import ValoraAnalytics from 'src/analytics/ValoraAnalytics'
 import { setNumberVerified } from 'src/app/actions'
 import { ErrorMessages } from 'src/app/ErrorMessages'
+import { DEFAULT_TESTNET, SMS_RETRIEVER_APP_SIGNATURE } from 'src/config'
+import { features } from 'src/flags'
 import { refreshAllBalances } from 'src/home/actions'
 import {
   Actions,
@@ -27,32 +31,38 @@ import {
   InputAttestationCodeAction,
   ReceiveAttestationMessageAction,
   resetVerification,
-  setHasSeenVerificationNux,
+  setCompletedCodes,
   setVerificationStatus,
+  StartVerificationAction,
+  udpateVerificationState,
 } from 'src/identity/actions'
-import { acceptedAttestationCodesSelector, attestationCodesSelector } from 'src/identity/reducer'
+import {
+  balanceSufficientForSigRetrieval,
+  fetchPhoneHashPrivate,
+} from 'src/identity/privateHashing'
+import {
+  acceptedAttestationCodesSelector,
+  attestationCodesSelector,
+  isVerificationStateExpiredSelector,
+  VerificationState,
+  verificationStateSelector,
+} from 'src/identity/reducer'
 import { startAutoSmsRetrieval } from 'src/identity/smsRetrieval'
-import { sendTransaction, sendTransactionPromises } from 'src/transactions/send'
+import { VerificationStatus } from 'src/identity/types'
+import { stableTokenBalanceSelector } from 'src/stableToken/reducer'
+import { sendTransaction } from 'src/transactions/send'
+import { newTransactionContext } from 'src/transactions/types'
 import Logger from 'src/utils/Logger'
-import { contractKit } from 'src/web3/contracts'
+import { getContractKit } from 'src/web3/contracts'
+import { registerAccountDek } from 'src/web3/dataEncryptionKey'
 import { getConnectedAccount, getConnectedUnlockedAccount } from 'src/web3/saga'
-import { privateCommentKeySelector } from 'src/web3/selectors'
 
 const TAG = 'identity/verification'
 
 export const NUM_ATTESTATIONS_REQUIRED = 3
-export const VERIFICATION_TIMEOUT = 5 * 60 * 1000 // 5 minutes
-
-export enum VerificationStatus {
-  Failed = -1,
-  Stopped = 0,
-  Prepping = 1,
-  GettingStatus = 2,
-  RequestingAttestations = 3,
-  RevealingNumber = 4,
-  RevealAttemptFailed = 5,
-  Done = 6,
-}
+export const ESTIMATED_COST_PER_ATTESTATION = 0.051
+export const VERIFICATION_TIMEOUT = 10 * 60 * 1000 // 10 minutes
+const REVEAL_RETRY_DELAY = 10 * 1000 // 10 seconds
 
 export enum CodeInputType {
   AUTOMATIC = 'automatic',
@@ -65,53 +75,113 @@ export interface AttestationCode {
   issuer: string
 }
 
-export function* checkVerification() {
-  const attestationsWrapper: AttestationsWrapper = yield call([
-    contractKit.contracts,
-    contractKit.contracts.getAttestations,
-  ])
+export function* fetchVerificationState() {
+  try {
+    const account: string = yield call(getConnectedUnlockedAccount)
+    const e164Number: string = yield select(e164NumberSelector)
+    const contractKit = yield call(getContractKit)
+    const attestationsWrapper: AttestationsWrapper = yield call([
+      contractKit.contracts,
+      contractKit.contracts.getAttestations,
+    ])
 
-  const account: string = yield call(getConnectedUnlockedAccount)
-  const e164Number: string = yield select(e164NumberSelector)
+    let phoneHash: string
+    let phoneHashDetails: PhoneNumberHashDetails
+    const isBalanceSufficientForSigRetrieval = yield call(balanceSufficientForSigRetrieval)
+    if (!isBalanceSufficientForSigRetrieval) {
+      const currentState = yield select(verificationStateSelector)
+      yield put(
+        udpateVerificationState({
+          ...currentState,
+          isBalanceSufficient: false,
+        })
+      )
+      return
+    }
 
-  const status: AttestationsStatus = yield call(
-    getAttestationsStatus,
-    attestationsWrapper,
-    account,
-    e164Number
-  )
+    if (features.USE_PHONE_NUMBER_PRIVACY) {
+      phoneHashDetails = yield call(fetchPhoneHashPrivate, e164Number)
+      phoneHash = phoneHashDetails.phoneHash
+    } else {
+      phoneHash = getPhoneHash(e164Number)
+      phoneHashDetails = {
+        e164Number,
+        phoneHash,
+        // @ts-ignore
+        salt: undefined,
+      }
+    }
+    ValoraAnalytics.track(VerificationEvents.verification_hash_retrieved, {
+      phoneHash,
+      address: account,
+    })
 
-  if (status.isVerified) {
-    yield put(setNumberVerified(true))
-    yield put(setHasSeenVerificationNux(true))
-    return true
+    ValoraAnalytics.track(VerificationEvents.verification_fetch_status_start)
+    yield put(setVerificationStatus(VerificationStatus.GettingStatus))
+    // Get all relevant info about the account's verification status
+    const status: AttestationsStatus = yield call(
+      getAttestationsStatus,
+      attestationsWrapper,
+      account,
+      phoneHash
+    )
+    ValoraAnalytics.track(VerificationEvents.verification_fetch_status_complete, {
+      ...status,
+    })
+
+    const actionableAttestations: ActionableAttestation[] = yield call(
+      getActionableAttestations,
+      attestationsWrapper,
+      phoneHash,
+      account
+    )
+
+    const isBalanceSufficient = yield call(
+      balanceSufficientForAttestations,
+      status.numAttestationsRemaining - actionableAttestations.length
+    )
+
+    yield put(
+      udpateVerificationState({
+        phoneHashDetails,
+        actionableAttestations,
+        status,
+        isBalanceSufficient,
+      })
+    )
+  } catch (error) {
+    Logger.error(TAG, 'Error occured during fetching verification state', error)
   }
-  return false
 }
 
-export function* startVerification() {
+export function* startVerification({ withoutRevealing }: StartVerificationAction) {
+  ValoraAnalytics.track(VerificationEvents.verification_start)
+
   yield put(resetVerification())
   yield call(getConnectedAccount)
+  if (yield select(isVerificationStateExpiredSelector)) {
+    yield call(fetchVerificationState)
+  }
 
   Logger.debug(TAG, 'Starting verification')
 
   const { result, cancel, timeout } = yield race({
-    result: call(doVerificationFlow),
+    result: call(doVerificationFlow, withoutRevealing),
     cancel: take(Actions.CANCEL_VERIFICATION),
     timeout: delay(VERIFICATION_TIMEOUT),
   })
 
   if (result === true) {
-    CeloAnalytics.track(CustomEventNames.verification_success)
+    ValoraAnalytics.track(VerificationEvents.verification_complete)
     Logger.debug(TAG, 'Verification completed successfully')
-  } else if (result === false) {
-    CeloAnalytics.track(CustomEventNames.verification_failed)
+  } else if (result) {
+    ValoraAnalytics.track(VerificationEvents.verification_error, { error: result })
     Logger.debug(TAG, 'Verification failed')
   } else if (cancel) {
-    CeloAnalytics.track(CustomEventNames.verification_cancelled)
+    ValoraAnalytics.track(VerificationEvents.verification_cancel)
     Logger.debug(TAG, 'Verification cancelled')
   } else if (timeout) {
-    CeloAnalytics.track(CustomEventNames.verification_timed_out)
+    ValoraAnalytics.track(VerificationEvents.verification_timeout)
     Logger.debug(TAG, 'Verification timed out')
     yield put(showError(ErrorMessages.VERIFICATION_TIMEOUT))
     yield put(setVerificationStatus(VerificationStatus.Failed))
@@ -121,78 +191,91 @@ export function* startVerification() {
   yield put(refreshAllBalances())
 }
 
-export function* doVerificationFlow() {
+export function* doVerificationFlow(withoutRevealing: boolean = false) {
   try {
     yield put(setVerificationStatus(VerificationStatus.Prepping))
-    const account: string = yield call(getConnectedUnlockedAccount)
-    const e164Number: string = yield select(e164NumberSelector)
-    const privDataKey = yield select(privateCommentKeySelector)
-    const dataKey = compressedPubKey(Buffer.from(privDataKey, 'hex'))
+    const {
+      phoneHashDetails,
+      status,
+      actionableAttestations,
+      isBalanceSufficient,
+    }: VerificationState = yield select(verificationStateSelector)
+    if (!status.isVerified) {
+      const { phoneHash } = phoneHashDetails
+      const account: string = yield call(getConnectedUnlockedAccount)
 
-    const attestationsWrapper: AttestationsWrapper = yield call([
-      contractKit.contracts,
-      contractKit.contracts.getAttestations,
-    ])
-    const accountsWrapper: AccountsWrapper = yield call([
-      contractKit.contracts,
-      contractKit.contracts.getAccounts,
-    ])
+      const contractKit = yield call(getContractKit)
 
-    CeloAnalytics.track(CustomEventNames.verification_setup)
+      const attestationsWrapper: AttestationsWrapper = yield call([
+        contractKit.contracts,
+        contractKit.contracts.getAttestations,
+      ])
 
-    // Get all relevant info about the account's verification status
-    yield put(setVerificationStatus(VerificationStatus.GettingStatus))
-    const status: AttestationsStatus = yield call(
-      getAttestationsStatus,
-      attestationsWrapper,
-      account,
-      e164Number
-    )
+      if (!isBalanceSufficient) {
+        yield put(setVerificationStatus(VerificationStatus.InsufficientBalance))
+        // Return error message for logging purposes
+        return ErrorMessages.INSUFFICIENT_BALANCE
+      }
 
-    CeloAnalytics.track(CustomEventNames.verification_get_status)
+      // Mark codes completed in previous attempts
+      yield put(setCompletedCodes(NUM_ATTESTATIONS_REQUIRED - status.numAttestationsRemaining))
 
-    if (status.isVerified) {
-      yield put(setVerificationStatus(VerificationStatus.Done))
-      yield put(setNumberVerified(true))
-      return true
-    }
+      let attestations: ActionableAttestation[]
+      if (status.numAttestationsRemaining <= actionableAttestations.length) {
+        attestations = actionableAttestations
+      } else {
+        yield put(setVerificationStatus(VerificationStatus.RequestingAttestations))
+        ValoraAnalytics.track(VerificationEvents.verification_request_all_attestations_start, {
+          attestationsToRequest: status.numAttestationsRemaining,
+        })
+        const newAttestations: ActionableAttestation[] = yield call(
+          requestAndRetrieveAttestations,
+          attestationsWrapper,
+          phoneHash,
+          account,
+          status.numAttestationsRemaining - actionableAttestations.length
+        )
+        attestations = [...actionableAttestations, ...newAttestations]
+      }
 
-    // Mark codes completed in previous attempts
-    yield put(completeAttestationCode(NUM_ATTESTATIONS_REQUIRED - status.numAttestationsRemaining))
+      const issuers = attestations.map((a) => a.issuer)
+      ValoraAnalytics.track(VerificationEvents.verification_request_all_attestations_complete, {
+        issuers,
+      })
 
-    yield put(setVerificationStatus(VerificationStatus.RequestingAttestations))
-    const attestations: ActionableAttestation[] = yield call(
-      requestAndRetrieveAttestations,
-      attestationsWrapper,
-      e164Number,
-      account,
-      status.numAttestationsRemaining
-    )
+      // Start listening for manual and/or auto message inputs
+      const receiveMessageTask: Task = yield takeEvery(
+        Actions.RECEIVE_ATTESTATION_MESSAGE,
+        attestationCodeReceiver(attestationsWrapper, phoneHash, account, issuers)
+      )
 
-    const issuers = attestations.map((a) => a.issuer)
+      let autoRetrievalTask: Task | undefined
+      if (Platform.OS === 'android') {
+        autoRetrievalTask = yield fork(startAutoSmsRetrieval)
+      }
 
-    // Start listening for manual and/or auto message inputs
-    const receiveMessageTask: Task = yield takeEvery(
-      Actions.RECEIVE_ATTESTATION_MESSAGE,
-      attestationCodeReceiver(attestationsWrapper, e164Number, account, issuers)
-    )
+      yield put(setVerificationStatus(VerificationStatus.RevealingNumber))
+      ValoraAnalytics.track(VerificationEvents.verification_reveal_all_attestations_start)
+      yield all([
+        // Request codes for the attestations needed
+        call(
+          revealNeededAttestations,
+          attestationsWrapper,
+          account,
+          phoneHashDetails,
+          attestations,
+          withoutRevealing
+        ),
+        // Set acccount and data encryption key in Accounts contract
+        // This is done in other places too, intentionally keeping it for more coverage
+        call(registerAccountDek, account),
+      ])
+      ValoraAnalytics.track(VerificationEvents.verification_reveal_all_attestations_complete)
 
-    let autoRetrievalTask: Task | undefined
-    if (Platform.OS === 'android') {
-      autoRetrievalTask = yield fork(startAutoSmsRetrieval)
-    }
-
-    yield put(setVerificationStatus(VerificationStatus.RevealingNumber))
-    yield all([
-      // Set acccount and data encryption key in contract
-      call(setAccount, accountsWrapper, account, dataKey),
-      // Request codes for the attestations needed
-      call(revealNeededAttestations, attestationsWrapper, account, e164Number, attestations),
-    ])
-
-    receiveMessageTask.cancel()
-    if (Platform.OS === 'android' && autoRetrievalTask) {
-      autoRetrievalTask.cancel()
+      receiveMessageTask.cancel()
+      if (Platform.OS === 'android' && autoRetrievalTask) {
+        autoRetrievalTask.cancel()
+      }
     }
 
     yield put(setVerificationStatus(VerificationStatus.Done))
@@ -200,48 +283,60 @@ export function* doVerificationFlow() {
     return true
   } catch (error) {
     Logger.error(TAG, 'Error occured during verification flow', error)
-    if (error.message in ErrorMessages) {
-      yield put(showError(error.message))
+    if (error.message === ErrorMessages.SALT_QUOTA_EXCEEDED) {
+      yield put(setVerificationStatus(VerificationStatus.SaltQuotaExceeded))
+    } else if (error.message === ErrorMessages.ODIS_INSUFFICIENT_BALANCE) {
+      yield put(setVerificationStatus(VerificationStatus.InsufficientBalance))
     } else {
-      yield put(showError(ErrorMessages.VERIFICATION_FAILURE))
+      yield put(setVerificationStatus(VerificationStatus.Failed))
+      yield put(showErrorOrFallback(error, ErrorMessages.VERIFICATION_FAILURE))
     }
-    yield put(setVerificationStatus(VerificationStatus.Failed))
-    return false
+    return error.message
   }
 }
 
-interface AttestationsStatus {
-  isVerified: boolean // user has sufficiently many attestations?
-  numAttestationsRemaining: number // number of attestations still needed
+export function* balanceSufficientForAttestations(attestationsRemaining: number) {
+  const userBalance = yield select(stableTokenBalanceSelector)
+  return new BigNumber(userBalance).isGreaterThan(
+    attestationsRemaining * ESTIMATED_COST_PER_ATTESTATION
+  )
 }
 
-// Requests if necessary additional attestations and returns all revealable attetations
+// Requests if necessary additional attestations and returns all revealable attestations
 export function* requestAndRetrieveAttestations(
   attestationsWrapper: AttestationsWrapper,
-  e164Number: string,
+  phoneHash: string,
   account: string,
   attestationsRemaining: number
 ) {
-  // The set of attestations we can reveal right now
-  let attestations: ActionableAttestation[] = yield call(
-    getActionableAttestations,
-    attestationsWrapper,
-    e164Number,
-    account
-  )
+  let attestations: ActionableAttestation[] = []
 
+  // Any verification failure past this point will be after sending a tx
+  // so do not prompt forno retry as these failures are not always
+  // light client related, and account may have insufficient balance
+  yield put(setRetryVerificationWithForno(false))
   while (attestations.length < attestationsRemaining) {
+    ValoraAnalytics.track(VerificationEvents.verification_request_attestation_start, {
+      currentAttestation: attestations.length,
+    })
     // Request any additional attestations beyond the original set
     yield call(
       requestAttestations,
       attestationsWrapper,
       attestationsRemaining - attestations.length,
-      e164Number,
+      phoneHash,
       account
     )
+    ValoraAnalytics.track(VerificationEvents.verification_request_attestation_complete)
 
     // Check if we have a sufficient set now by fetching the new total set
-    attestations = yield call(getActionableAttestations, attestationsWrapper, e164Number, account)
+    attestations = yield call(getActionableAttestations, attestationsWrapper, phoneHash, account)
+    ValoraAnalytics.track(
+      VerificationEvents.verification_request_all_attestations_refresh_progress,
+      {
+        attestationsRemaining: attestationsRemaining - attestations.length,
+      }
+    )
   }
 
   return attestations
@@ -249,74 +344,74 @@ export function* requestAndRetrieveAttestations(
 
 async function getActionableAttestations(
   attestationsWrapper: AttestationsWrapper,
-  e164Number: string,
+  phoneHash: string,
   account: string
 ) {
-  CeloAnalytics.track(CustomEventNames.verification_actionable_attestation_start)
   const attestations = await retryAsync(
     attestationsWrapper.getActionableAttestations.bind(attestationsWrapper),
-    3,
-    [e164Number, account]
+    NUM_ATTESTATIONS_REQUIRED,
+    [phoneHash, account]
   )
-  CeloAnalytics.track(CustomEventNames.verification_actionable_attestation_finish)
   return attestations
 }
 
-async function getAttestationsStatus(
+export async function getAttestationsStatus(
   attestationsWrapper: AttestationsWrapper,
   account: string,
-  e164Number: string
+  phoneHash: string
 ): Promise<AttestationsStatus> {
   Logger.debug(TAG + '@getAttestationsStatus', 'Getting verification status from contract')
 
-  const attestationStats = await attestationsWrapper.getAttestationStat(e164Number, account)
-  // Number of complete (verified) attestations
-  const numAttestationsCompleted = attestationStats.completed
-  // Total number of attestation requests made
-  const numAttestationRequests = attestationStats.total
-  // Number of attestations remaining to be verified
-  const numAttestationsRemaining = NUM_ATTESTATIONS_REQUIRED - numAttestationsCompleted
+  const attestationStatus = await attestationsWrapper.getVerifiedStatus(
+    phoneHash,
+    account,
+    NUM_ATTESTATIONS_REQUIRED
+  )
 
   Logger.debug(
     TAG + '@getAttestationsStatus',
-    `${numAttestationsRemaining} verifications remaining. Total of ${numAttestationRequests} requested.`
+    `${attestationStatus.numAttestationsRemaining} verifications remaining. Total of ${attestationStatus.total} requested.`
   )
 
-  if (numAttestationsRemaining <= 0) {
+  if (attestationStatus.numAttestationsRemaining <= 0) {
     Logger.debug(TAG + '@getAttestationsStatus', 'User is already verified')
-    return {
-      isVerified: true,
-      numAttestationsRemaining,
-    }
   }
 
-  return {
-    isVerified: false,
-    numAttestationsRemaining,
-  }
+  return attestationStatus
 }
 
 function* requestAttestations(
   attestationsWrapper: AttestationsWrapper,
   numAttestationsRequestsNeeded: number,
-  e164Number: string,
+  phoneHash: string,
   account: string
 ) {
   if (numAttestationsRequestsNeeded <= 0) {
-    Logger.debug(`${TAG}@requestNeededAttestations`, 'No additional attestations requests needed')
+    Logger.debug(`${TAG}@requestAttestations`, 'No additional attestations requests needed')
     return
   }
-  CeloAnalytics.track(CustomEventNames.verification_request_attestations)
 
   const unselectedRequest: UnselectedRequest = yield call(
     [attestationsWrapper, attestationsWrapper.getUnselectedRequest],
-    e164Number,
+    phoneHash,
     account
   )
+  let isUnselectedRequestValid = unselectedRequest.blockNumber !== 0
+  if (isUnselectedRequestValid) {
+    isUnselectedRequestValid = !(yield call(
+      [attestationsWrapper, attestationsWrapper.isAttestationExpired],
+      unselectedRequest.blockNumber
+    ))
+  }
 
-  if (unselectedRequest.blockNumber === 0) {
+  if (isUnselectedRequestValid) {
     Logger.debug(
-      `${TAG}@requestNeededAttestations`,
+      `${TAG}@requestAttestations`,
+      `Valid unselected request found, skipping approval/request`
+    )
+  } else {
+    Logger.debug(
+      `${TAG}@requestAttestations`,
       `Approving ${numAttestationsRequestsNeeded} new attestations`
     )
     const approveTx: CeloTransactionObject<boolean> = yield call(
@@ -324,60 +419,65 @@ function* requestAttestations(
       numAttestationsRequestsNeeded
     )
 
-    yield call(sendTransaction, approveTx.txo, account, TAG, 'Approve Attestations')
+    yield call(
+      sendTransaction,
+      approveTx.txo,
+      account,
+      newTransactionContext(TAG, 'Approve attestations')
+    )
+    ValoraAnalytics.track(VerificationEvents.verification_request_attestation_approve_tx_sent)
 
     Logger.debug(
-      `${TAG}@requestNeededAttestations`,
+      `${TAG}@requestAttestations`,
       `Requesting ${numAttestationsRequestsNeeded} new attestations`
     )
 
     const requestTx: CeloTransactionObject<void> = yield call(
       [attestationsWrapper, attestationsWrapper.request],
-      e164Number,
+      phoneHash,
       numAttestationsRequestsNeeded
     )
 
-    yield call(sendTransaction, requestTx.txo, account, TAG, 'Request Attestations')
-  } else {
-    Logger.debug(
-      `${TAG}@requestNeededAttestations`,
-      `Unselected request found, skipping approval/request`
+    yield call(
+      sendTransaction,
+      requestTx.txo,
+      account,
+      newTransactionContext(TAG, 'Request attestations')
     )
+    ValoraAnalytics.track(VerificationEvents.verification_request_attestation_request_tx_sent)
   }
 
-  Logger.debug(`${TAG}@requestNeededAttestations`, 'Waiting for block to select issuer')
+  Logger.debug(`${TAG}@requestAttestations`, 'Waiting for block to select issuers')
+  ValoraAnalytics.track(VerificationEvents.verification_request_attestation_await_issuer_selection)
+
+  yield call([attestationsWrapper, attestationsWrapper.waitForSelectingIssuers], phoneHash, account)
+
+  Logger.debug(`${TAG}@requestAttestations`, 'Selecting issuers')
+  ValoraAnalytics.track(VerificationEvents.verification_request_attestation_select_issuer)
+
+  const selectIssuersTx = attestationsWrapper.selectIssuers(phoneHash)
 
   yield call(
-    [attestationsWrapper, attestationsWrapper.waitForSelectingIssuers],
-    e164Number,
-    account
-  )
-
-  Logger.debug(`${TAG}@requestNeededAttestations`, 'Selecting issuer')
-
-  const selectIssuersTx = attestationsWrapper.selectIssuers(e164Number)
-
-  const txPromises: TxPromises = yield call(
-    sendTransactionPromises,
+    sendTransaction,
     selectIssuersTx.txo,
     account,
-    TAG,
-    'Select Issuer'
+    newTransactionContext(TAG, 'Select attestation issuers')
   )
-  yield txPromises.receipt
-
-  CeloAnalytics.track(CustomEventNames.verification_requested_attestations)
+  ValoraAnalytics.track(VerificationEvents.verification_request_attestation_issuer_tx_sent)
 }
 
 function attestationCodeReceiver(
   attestationsWrapper: AttestationsWrapper,
-  e164Number: string,
+  phoneHash: string,
   account: string,
   allIssuers: string[]
 ) {
   return function*(action: ReceiveAttestationMessageAction) {
     if (!action || !action.message) {
       Logger.error(TAG + '@attestationCodeReceiver', 'Received empty code. Ignoring.')
+      ValoraAnalytics.track(VerificationEvents.verification_code_received, {
+        context: 'Empty code',
+      })
       return
     }
 
@@ -390,6 +490,9 @@ function attestationCodeReceiver(
       const existingCode = yield call(isCodeAlreadyAccepted, code)
       if (existingCode) {
         Logger.warn(TAG + '@attestationCodeReceiver', 'Code already exists in store, skipping.')
+        ValoraAnalytics.track(VerificationEvents.verification_code_received, {
+          context: 'Code already exists',
+        })
         if (
           CodeInputType.MANUAL === action.inputType ||
           CodeInputType.DEEP_LINK === action.inputType
@@ -398,10 +501,10 @@ function attestationCodeReceiver(
         }
         return
       }
-
+      ValoraAnalytics.track(VerificationEvents.verification_code_received)
       const issuer = yield call(
         [attestationsWrapper, attestationsWrapper.findMatchingIssuer],
-        e164Number,
+        phoneHash,
         account,
         code,
         allIssuers
@@ -412,15 +515,15 @@ function attestationCodeReceiver(
 
       Logger.debug(TAG + '@attestationCodeReceiver', `Received code for issuer ${issuer}`)
 
-      CeloAnalytics.track(CustomEventNames.verification_validate_code_start, { issuer })
+      ValoraAnalytics.track(VerificationEvents.verification_code_validate_start, { issuer })
       const isValidRequest = yield call(
         [attestationsWrapper, attestationsWrapper.validateAttestationCode],
-        e164Number,
+        phoneHash,
         account,
         issuer,
         code
       )
-      CeloAnalytics.track(CustomEventNames.verification_validate_code_finish, { issuer })
+      ValoraAnalytics.track(VerificationEvents.verification_code_validate_complete, { issuer })
 
       if (!isValidRequest) {
         throw new Error('Code is not valid')
@@ -447,8 +550,9 @@ function* isCodeAlreadyAccepted(code: string) {
 function* revealNeededAttestations(
   attestationsWrapper: AttestationsWrapper,
   account: string,
-  e164Number: string,
-  attestations: ActionableAttestation[]
+  phoneHashDetails: PhoneNumberHashDetails,
+  attestations: ActionableAttestation[],
+  withoutRevealing: boolean = false
 ) {
   Logger.debug(TAG + '@revealNeededAttestations', `Revealing ${attestations.length} attestations`)
   yield all(
@@ -457,8 +561,9 @@ function* revealNeededAttestations(
         revealAndCompleteAttestation,
         attestationsWrapper,
         account,
-        e164Number,
-        attestation
+        phoneHashDetails,
+        attestation,
+        withoutRevealing
       )
     })
   )
@@ -467,66 +572,180 @@ function* revealNeededAttestations(
 function* revealAndCompleteAttestation(
   attestationsWrapper: AttestationsWrapper,
   account: string,
-  e164Number: string,
-  attestation: ActionableAttestation
+  phoneHashDetails: PhoneNumberHashDetails,
+  attestation: ActionableAttestation,
+  withoutRevealing: boolean = false
 ) {
   const issuer = attestation.issuer
+  if (!withoutRevealing) {
+    ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_start, { issuer })
+    yield call(tryRevealPhoneNumber, attestationsWrapper, account, phoneHashDetails, attestation)
+  }
 
-  yield call(tryRevealPhoneNumber, attestationsWrapper, account, e164Number, attestation)
-
+  ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_await_code_start, {
+    issuer,
+  })
   const code: AttestationCode = yield call(waitForAttestationCode, issuer)
+
+  ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_await_code_complete, {
+    issuer,
+  })
 
   Logger.debug(TAG + '@revealAttestation', `Completing code for issuer: ${code.issuer}`)
 
-  CeloAnalytics.track(CustomEventNames.verification_complete_attestation, { issuer })
-
+  // Generate and send the transaction to complete the attestation from the given issuer.
   const completeTx: CeloTransactionObject<void> = yield call(
     [attestationsWrapper, attestationsWrapper.complete],
-    e164Number,
+    phoneHashDetails.phoneHash,
     account,
     code.issuer,
     code.code
   )
-  yield call(sendTransaction, completeTx.txo, account, TAG, `Complete ${issuer}`)
+  const context = newTransactionContext(TAG, `Complete attestation from ${issuer}`)
+  yield call(sendTransaction, completeTx.txo, account, context)
 
-  CeloAnalytics.track(CustomEventNames.verification_completed_attestation, { issuer })
+  ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_complete, { issuer })
 
-  yield put(completeAttestationCode())
+  yield put(completeAttestationCode(code))
   Logger.debug(TAG + '@revealAttestation', `Attestation for issuer ${issuer} completed`)
 }
 
 function* tryRevealPhoneNumber(
   attestationsWrapper: AttestationsWrapper,
   account: string,
-  e164Number: string,
+  phoneHashDetails: PhoneNumberHashDetails,
   attestation: ActionableAttestation
 ) {
   const issuer = attestation.issuer
   Logger.debug(TAG + '@tryRevealPhoneNumber', `Revealing an attestation for issuer: ${issuer}`)
-  CeloAnalytics.track(CustomEventNames.verification_reveal_attestation, { issuer })
 
   try {
-    const response = yield call(
-      [attestationsWrapper, attestationsWrapper.revealPhoneNumberToIssuer],
-      e164Number,
+    // Only include retriever app sig for android, iOS doesn't support auto-read
+    const smsRetrieverAppSig = Platform.OS === 'android' ? SMS_RETRIEVER_APP_SIGNATURE : undefined
+
+    // Proxy required for any network where attestation service domains are not static
+    // This works around TLS issues
+    const useProxy = DEFAULT_TESTNET === 'mainnet'
+
+    const revealRequestBody: AttesationServiceRevealRequest = {
       account,
-      attestation.issuer,
-      attestation.attestationServiceURL
+      issuer,
+      phoneNumber: phoneHashDetails.e164Number,
+      salt: phoneHashDetails.pepper,
+      smsRetrieverAppSig,
+    }
+
+    const { ok, status, body } = yield call(
+      postToAttestationService,
+      attestationsWrapper,
+      attestation.attestationServiceURL,
+      revealRequestBody,
+      useProxy
     )
-    if (!response.ok) {
-      throw new Error(
-        `Error revealing to issuer ${attestation.attestationServiceURL}. Status code: ${response.status}`
+
+    if (ok) {
+      Logger.debug(TAG + '@tryRevealPhoneNumber', `Revealing for issuer ${issuer} successful`)
+      ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_revealed, {
+        neededRetry: false,
+        issuer,
+      })
+      return
+    }
+
+    if (body.error && body.error.includes('Attestation already sent')) {
+      Logger.warn(TAG + '@tryRevealPhoneNumber', `Ignore already sent SMS for issuer: ${issuer}`)
+      return
+    }
+
+    if (body.error && body.error.includes('No incomplete attestation found')) {
+      // Retry as attestation service might not yet have received the block where it was made responsible for an attestation
+      Logger.debug(TAG + '@tryRevealPhoneNumber', `Retrying revealing for issuer: ${issuer}`)
+
+      yield delay(REVEAL_RETRY_DELAY)
+
+      const { ok: retryOk, status: retryStatus } = yield call(
+        postToAttestationService,
+        attestationsWrapper,
+        attestation.attestationServiceURL,
+        revealRequestBody,
+        useProxy
+      )
+
+      if (retryOk) {
+        Logger.debug(`${TAG}@tryRevealPhoneNumber`, `Reveal retry for issuer ${issuer} successful`)
+        ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_revealed, {
+          neededRetry: true,
+          issuer,
+        })
+        return
+      }
+
+      Logger.error(
+        `${TAG}@tryRevealPhoneNumber`,
+        `Reveal retry for issuer ${issuer} failed with status ${retryStatus}`
       )
     }
 
-    Logger.debug(TAG + '@tryRevealPhoneNumber', `Revealing for issuer ${issuer} successful`)
+    Logger.error(TAG + '@tryRevealPhoneNumber', `Reveal response not okay. Status code: ${status}`)
+    throw new Error(
+      `Error revealing to issuer ${attestation.attestationServiceURL}. Status code: ${status}`
+    )
   } catch (error) {
     // This is considered a recoverable error because the user may have received the code in a previous run
     // So instead of propagating the error, we catch it just update status. This will trigger the modal,
     // allowing the user to enter codes manually or skip verification.
     Logger.error(TAG + '@tryRevealPhoneNumber', `Reveal for issuer ${issuer} failed`, error)
-    yield put(showError(ErrorMessages.REVEAL_ATTESTATION_FAILURE))
+    ValoraAnalytics.track(VerificationEvents.verification_reveal_attestation_error, {
+      issuer,
+      error: error.message,
+    })
     yield put(setVerificationStatus(VerificationStatus.RevealAttemptFailed))
+  }
+}
+
+async function postToAttestationService(
+  attestationsWrapper: AttestationsWrapper,
+  attestationServiceUrl: string,
+  revealRequestBody: AttesationServiceRevealRequest,
+  useProxy: boolean
+): Promise<{ ok: boolean; status: number; body: any }> {
+  if (useProxy) {
+    Logger.debug(
+      `${TAG}@postToAttestationService`,
+      `Posting to proxy for service url ${attestationServiceUrl}`
+    )
+    const fullUrl = attestationServiceUrl + '/attestations'
+    const body = {
+      ...revealRequestBody,
+      attestationServiceUrl: fullUrl,
+    }
+    try {
+      const proxyReveal = functions().httpsCallable('proxyReveal')
+      const response = await proxyReveal(body)
+      const { status, data } = response.data
+      const ok = status >= 200 && status < 300
+      return { ok, status, body: JSON.parse(data) }
+    } catch (error) {
+      Logger.error(`${TAG}@postToAttestationService`, 'Error calling proxyReveal', error)
+      // The httpsCallable throws on any HTTP error code instead of
+      // setting response.ok like fetch does, so catching errors here
+      return { ok: false, status: 500, body: error }
+    }
+  } else {
+    Logger.debug(
+      `${TAG}@postToAttestationService`,
+      `Revealing with contract kit for service url ${attestationServiceUrl}`
+    )
+    const response = await attestationsWrapper.revealPhoneNumberToIssuer(
+      revealRequestBody.phoneNumber,
+      revealRequestBody.account,
+      revealRequestBody.issuer,
+      attestationServiceUrl,
+      revealRequestBody.salt,
+      revealRequestBody.smsRetrieverAppSig
+    )
+    const body = await response.json()
+    return { ok: response.ok, status: response.status, body }
   }
 }
 
@@ -543,72 +762,5 @@ function* waitForAttestationCode(issuer: string) {
     if (action.code.issuer === issuer) {
       return action.code
     }
-  }
-}
-
-function* setAccount(accountsWrapper: AccountsWrapper, address: string, dataKey: string) {
-  Logger.debug(TAG, 'Setting wallet address and public data encryption key')
-  const upToDate = yield call(isAccountUpToDate, accountsWrapper, address, dataKey)
-  if (upToDate) {
-    return
-  }
-  // @ts-ignore datakey type seems wrong
-  const setAccountTx = accountsWrapper.setAccount('', dataKey, address)
-  yield call(sendTransaction, setAccountTx.txo, address, TAG, 'Set Wallet Address & DEK')
-  CeloAnalytics.track(CustomEventNames.verification_set_account)
-}
-
-async function isAccountUpToDate(
-  accountsWrapper: AccountsWrapper,
-  address: string,
-  dataKey: string
-) {
-  const [currentWalletAddress, currentDEK] = await Promise.all([
-    accountsWrapper.getWalletAddress(address),
-    // getDataEncryptionKey actually returns a string instead of an array
-    accountsWrapper.getDataEncryptionKey(address).then((key) => [key]),
-  ])
-  return (
-    eqAddress(currentWalletAddress, address) && currentDEK && eqAddress(currentDEK.join(), dataKey)
-  )
-}
-
-export function* revokeVerification() {
-  try {
-    Logger.debug(TAG + '@revokeVerification', 'Revoking previous verification')
-
-    // TODO: https://github.com/celo-org/celo-monorepo/issues/1830
-    yield put(
-      showMessage('Revocation not currently supported. Just resetting local verification state')
-    )
-    yield put(resetVerification())
-    yield put(setNumberVerified(false))
-
-    // const account = yield call(getConnectedUnlockedAccount)
-    // const [, e164NumberHash]: string[] = yield call(getE164NumberHash)
-    // const attestationsWrapper: AttestationsWrapper = yield getattestationsWrapper(web3)
-    // const currentAccounts:
-    //   | string[]
-    //   | undefined = yield attestationsWrapper.methods
-    //   .lookupAccountsForIdentifier(e164NumberHash)
-    //   .call()
-    // if (!currentAccounts) {
-    //   Logger.warn(TAG + '@revokeVerification', 'No accounts found for phone number')
-    //   return
-    // }
-
-    // const index = currentAccounts.map((a) => a.toLowerCase()).indexOf(account)
-    // if (index < 0) {
-    //   Logger.warn(TAG + '@revokeVerification', 'Account not found')
-    //   return
-    // }
-
-    // const revokeTx = attestationsWrapper.methods.revoke(e164NumberHash, index)
-    // yield call(sendTransaction, revokeTx, account, TAG, 'Revoke attestation')
-
-    // Logger.debug(TAG + '@revokeVerification', 'Done revoking previous verification')
-    // Logger.showMessage('Done revoking phone verification')
-  } catch (error) {
-    Logger.error(TAG + '@revokeVerification', 'Error revoking verification', error)
   }
 }

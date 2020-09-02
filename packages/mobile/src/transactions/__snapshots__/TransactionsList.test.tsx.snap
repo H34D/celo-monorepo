@@ -2,15 +2,16 @@
 
 exports[`ignores failed standby transactions 1`] = `
 <RCTScrollView
-  ItemSeparatorComponent={[Function]}
   data={
     Array [
       Object {
         "__typename": "TokenTransfer",
         "address": "0xce10ce10ce10ce10ce10ce10ce10ce10ce10ce10",
         "amount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "-0.2",
@@ -26,8 +27,10 @@ exports[`ignores failed standby transactions 1`] = `
       Object {
         "__typename": "TokenExchange",
         "amount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "0.994982275992944156",
@@ -36,8 +39,10 @@ exports[`ignores failed standby transactions 1`] = `
         },
         "hash": "0x16fbd53c4871f0657f40e1b4515184be04bed8912c6e2abc2cda549e4ad8f852",
         "makerAmount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cGLD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "10.06007113270411465777",
             "value": "1.006007113270411465777",
@@ -46,8 +51,10 @@ exports[`ignores failed standby transactions 1`] = `
         },
         "status": "Complete",
         "takerAmount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "0.994982275992944156",
@@ -66,7 +73,6 @@ exports[`ignores failed standby transactions 1`] = `
   initialNumToRender={10}
   keyExtractor={[Function]}
   maxToRenderPerBatch={10}
-  numColumns={1}
   onContentSizeChange={[Function]}
   onEndReachedThreshold={2}
   onLayout={[Function]}
@@ -90,7 +96,6 @@ exports[`ignores failed standby transactions 1`] = `
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -111,7 +116,8 @@ exports[`ignores failed standby transactions 1`] = `
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -154,16 +160,20 @@ exports[`ignores failed standby transactions 1`] = `
                 <Image
                   source={
                     Object {
-                      "testUri": "../../../packages/mobile/src/images/unknown-user-icon.png",
+                      "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
                     }
                   }
                   style={
-                    Object {
-                      "alignItems": "center",
-                      "height": 40,
-                      "justifyContent": "center",
-                      "width": 40,
-                    }
+                    Array [
+                      Object {
+                        "alignSelf": "center",
+                        "margin": "auto",
+                      },
+                      Object {
+                        "height": 40,
+                        "width": 40,
+                      },
+                    ]
                   }
                 />
               </View>
@@ -189,8 +199,9 @@ exports[`ignores failed standby transactions 1`] = `
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 15,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
@@ -200,25 +211,23 @@ exports[`ignores failed standby transactions 1`] = `
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
-                      Object {
-                        "color": "#81868B",
-                        "fontFamily": "Hind-Regular",
-                        "fontSize": 15,
-                        "lineHeight": 20,
-                      },
+                      false,
                     ],
+                    Object {
+                      "color": "#2E3338",
+                    },
                   ]
                 }
               >
-                -
                 $
                 0.20
               </Text>
@@ -226,54 +235,19 @@ exports[`ignores failed standby transactions 1`] = `
             <Text
               style={
                 Object {
-                  "color": "#81868B",
-                  "fontFamily": "Hind-Regular",
-                  "fontSize": 15,
-                  "marginTop": -2,
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
-              Hi
+              feedItemSentInfo
             </Text>
-            <View
-              style={
-                Array [
-                  Object {
-                    "alignItems": "center",
-                    "flex": 1,
-                    "flexDirection": "row",
-                  },
-                  Object {
-                    "marginTop": 8,
-                  },
-                ]
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                Jan 9 global:at 12:42 AM
-              </Text>
-            </View>
           </View>
         </View>
       </View>
-      <View
-        style={
-          Object {
-            "backgroundColor": "rgba(134, 138, 141, 0.15)",
-            "height": 1,
-            "marginHorizontal": 16,
-          }
-        }
-      />
     </View>
     <View
       onLayout={[Function]}
@@ -282,7 +256,6 @@ exports[`ignores failed standby transactions 1`] = `
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -303,7 +276,8 @@ exports[`ignores failed standby transactions 1`] = `
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -312,9 +286,6 @@ exports[`ignores failed standby transactions 1`] = `
               Object {
                 "alignItems": "center",
                 "flexDirection": "column",
-                "height": 40,
-                "justifyContent": "center",
-                "width": 40,
               }
             }
           >
@@ -322,11 +293,12 @@ exports[`ignores failed standby transactions 1`] = `
               resizeMode="contain"
               source={
                 Object {
-                  "testUri": "../../../packages/mobile/src/images/exchangeGoldGreen.png",
+                  "testUri": "../../../packages/mobile/src/images/transaction-exchange.png",
                 }
               }
               style={
                 Object {
+                  "height": 40,
                   "width": 40,
                 }
               }
@@ -344,7 +316,7 @@ exports[`ignores failed standby transactions 1`] = `
               style={
                 Object {
                   "flexDirection": "row",
-                  "marginTop": 3,
+                  "marginTop": -1,
                 }
               }
             >
@@ -352,46 +324,50 @@ exports[`ignores failed standby transactions 1`] = `
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 14,
-                    "lineHeight": 18,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
-                exchange
+                feedItemExchangeTitle
               </Text>
               <Text
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
                       Object {
-                        "color": "#2E3338",
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 15,
-                        "lineHeight": 20,
+                        "color": "#1AB775",
                       },
                     ],
+                    Object {
+                      "color": "#1AB775",
+                    },
                   ]
                 }
               >
-                
+                +
                 $
                 0.99
               </Text>
             </View>
-            <View
+            <Text
               style={
                 Object {
-                  "alignItems": "center",
-                  "flexDirection": "row",
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
@@ -399,93 +375,17 @@ exports[`ignores failed standby transactions 1`] = `
                 numberOfLines={1}
                 style={
                   Array [
+                    undefined,
                     Object {
-                      "color": "#FBCC5C",
+                      "color": undefined,
                     },
-                    Array [
-                      Object {
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 16,
-                        "lineHeight": 20,
-                      },
-                      false,
-                    ],
                   ]
                 }
               >
                 
-                0.10
+                0.100
               </Text>
-              <View
-                style={
-                  Object {
-                    "paddingBottom": 8,
-                    "paddingHorizontal": 5,
-                  }
-                }
-              >
-                <svg
-                  fill="none"
-                  height="6"
-                  style={Object {}}
-                  viewBox="0 0 9 6"
-                  width="9"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    clip-rule="evenodd"
-                    d="M5.0998 5.45001L8.39993 3.02504L5.0998 0.600067V2.22512L0.399933 2.22512V3.82518L5.0998 3.82518V5.45001Z"
-                    fill="rgba(0, 0, 0, .4)"
-                    fill-rule="evenodd"
-                    style={Object {}}
-                  />
-                </svg>
-              </View>
-              <Text
-                numberOfLines={1}
-                style={
-                  Array [
-                    Object {
-                      "color": "#42D689",
-                    },
-                    Array [
-                      Object {
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 16,
-                        "lineHeight": 20,
-                      },
-                      false,
-                    ],
-                  ]
-                }
-              >
-                
-                0.99
-              </Text>
-            </View>
-            <View
-              style={
-                Object {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "flexDirection": "row",
-                  "marginTop": 8,
-                }
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                Jan 9 global:at 12:41 AM
-              </Text>
-            </View>
+            </Text>
           </View>
         </View>
       </View>
@@ -494,17 +394,18 @@ exports[`ignores failed standby transactions 1`] = `
 </RCTScrollView>
 `;
 
-exports[`ignores pending standby transactions that are completed in the response and removes them 1`] = `
+exports[`ignores pending standby transactions that are completed in the response 1`] = `
 <RCTScrollView
-  ItemSeparatorComponent={[Function]}
   data={
     Array [
       Object {
         "__typename": "TokenTransfer",
         "address": "0xce10ce10ce10ce10ce10ce10ce10ce10ce10ce10",
         "amount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "-0.2",
@@ -520,8 +421,10 @@ exports[`ignores pending standby transactions that are completed in the response
       Object {
         "__typename": "TokenExchange",
         "amount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "0.994982275992944156",
@@ -530,8 +433,10 @@ exports[`ignores pending standby transactions that are completed in the response
         },
         "hash": "0x16fbd53c4871f0657f40e1b4515184be04bed8912c6e2abc2cda549e4ad8f852",
         "makerAmount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cGLD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "10.06007113270411465777",
             "value": "1.006007113270411465777",
@@ -540,8 +445,10 @@ exports[`ignores pending standby transactions that are completed in the response
         },
         "status": "Complete",
         "takerAmount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "0.994982275992944156",
@@ -560,7 +467,6 @@ exports[`ignores pending standby transactions that are completed in the response
   initialNumToRender={10}
   keyExtractor={[Function]}
   maxToRenderPerBatch={10}
-  numColumns={1}
   onContentSizeChange={[Function]}
   onEndReachedThreshold={2}
   onLayout={[Function]}
@@ -584,7 +490,6 @@ exports[`ignores pending standby transactions that are completed in the response
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -605,7 +510,8 @@ exports[`ignores pending standby transactions that are completed in the response
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -648,16 +554,20 @@ exports[`ignores pending standby transactions that are completed in the response
                 <Image
                   source={
                     Object {
-                      "testUri": "../../../packages/mobile/src/images/unknown-user-icon.png",
+                      "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
                     }
                   }
                   style={
-                    Object {
-                      "alignItems": "center",
-                      "height": 40,
-                      "justifyContent": "center",
-                      "width": 40,
-                    }
+                    Array [
+                      Object {
+                        "alignSelf": "center",
+                        "margin": "auto",
+                      },
+                      Object {
+                        "height": 40,
+                        "width": 40,
+                      },
+                    ]
                   }
                 />
               </View>
@@ -683,8 +593,9 @@ exports[`ignores pending standby transactions that are completed in the response
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 15,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
@@ -694,25 +605,23 @@ exports[`ignores pending standby transactions that are completed in the response
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
-                      Object {
-                        "color": "#81868B",
-                        "fontFamily": "Hind-Regular",
-                        "fontSize": 15,
-                        "lineHeight": 20,
-                      },
+                      false,
                     ],
+                    Object {
+                      "color": "#2E3338",
+                    },
                   ]
                 }
               >
-                -
                 $
                 0.20
               </Text>
@@ -720,54 +629,19 @@ exports[`ignores pending standby transactions that are completed in the response
             <Text
               style={
                 Object {
-                  "color": "#81868B",
-                  "fontFamily": "Hind-Regular",
-                  "fontSize": 15,
-                  "marginTop": -2,
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
-              Hi
+              feedItemSentInfo
             </Text>
-            <View
-              style={
-                Array [
-                  Object {
-                    "alignItems": "center",
-                    "flex": 1,
-                    "flexDirection": "row",
-                  },
-                  Object {
-                    "marginTop": 8,
-                  },
-                ]
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                Jan 9 global:at 12:42 AM
-              </Text>
-            </View>
           </View>
         </View>
       </View>
-      <View
-        style={
-          Object {
-            "backgroundColor": "rgba(134, 138, 141, 0.15)",
-            "height": 1,
-            "marginHorizontal": 16,
-          }
-        }
-      />
     </View>
     <View
       onLayout={[Function]}
@@ -776,7 +650,6 @@ exports[`ignores pending standby transactions that are completed in the response
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -797,7 +670,8 @@ exports[`ignores pending standby transactions that are completed in the response
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -806,9 +680,6 @@ exports[`ignores pending standby transactions that are completed in the response
               Object {
                 "alignItems": "center",
                 "flexDirection": "column",
-                "height": 40,
-                "justifyContent": "center",
-                "width": 40,
               }
             }
           >
@@ -816,11 +687,12 @@ exports[`ignores pending standby transactions that are completed in the response
               resizeMode="contain"
               source={
                 Object {
-                  "testUri": "../../../packages/mobile/src/images/exchangeGoldGreen.png",
+                  "testUri": "../../../packages/mobile/src/images/transaction-exchange.png",
                 }
               }
               style={
                 Object {
+                  "height": 40,
                   "width": 40,
                 }
               }
@@ -838,7 +710,7 @@ exports[`ignores pending standby transactions that are completed in the response
               style={
                 Object {
                   "flexDirection": "row",
-                  "marginTop": 3,
+                  "marginTop": -1,
                 }
               }
             >
@@ -846,46 +718,50 @@ exports[`ignores pending standby transactions that are completed in the response
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 14,
-                    "lineHeight": 18,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
-                exchange
+                feedItemExchangeTitle
               </Text>
               <Text
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
                       Object {
-                        "color": "#2E3338",
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 15,
-                        "lineHeight": 20,
+                        "color": "#1AB775",
                       },
                     ],
+                    Object {
+                      "color": "#1AB775",
+                    },
                   ]
                 }
               >
-                
+                +
                 $
                 0.99
               </Text>
             </View>
-            <View
+            <Text
               style={
                 Object {
-                  "alignItems": "center",
-                  "flexDirection": "row",
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
@@ -893,111 +769,27 @@ exports[`ignores pending standby transactions that are completed in the response
                 numberOfLines={1}
                 style={
                   Array [
+                    undefined,
                     Object {
-                      "color": "#FBCC5C",
+                      "color": undefined,
                     },
-                    Array [
-                      Object {
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 16,
-                        "lineHeight": 20,
-                      },
-                      false,
-                    ],
                   ]
                 }
               >
                 
-                0.10
+                0.100
               </Text>
-              <View
-                style={
-                  Object {
-                    "paddingBottom": 8,
-                    "paddingHorizontal": 5,
-                  }
-                }
-              >
-                <svg
-                  fill="none"
-                  height="6"
-                  style={Object {}}
-                  viewBox="0 0 9 6"
-                  width="9"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    clip-rule="evenodd"
-                    d="M5.0998 5.45001L8.39993 3.02504L5.0998 0.600067V2.22512L0.399933 2.22512V3.82518L5.0998 3.82518V5.45001Z"
-                    fill="rgba(0, 0, 0, .4)"
-                    fill-rule="evenodd"
-                    style={Object {}}
-                  />
-                </svg>
-              </View>
-              <Text
-                numberOfLines={1}
-                style={
-                  Array [
-                    Object {
-                      "color": "#42D689",
-                    },
-                    Array [
-                      Object {
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 16,
-                        "lineHeight": 20,
-                      },
-                      false,
-                    ],
-                  ]
-                }
-              >
-                
-                0.99
-              </Text>
-            </View>
-            <View
-              style={
-                Object {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "flexDirection": "row",
-                  "marginTop": 8,
-                }
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                Jan 9 global:at 12:41 AM
-              </Text>
-            </View>
+            </Text>
           </View>
         </View>
       </View>
     </View>
-    <View
-      style={
-        Object {
-          "height": 0,
-        }
-      }
-    />
   </View>
 </RCTScrollView>
 `;
 
 exports[`renders the received data along with the standby transactions 1`] = `
 <RCTScrollView
-  ItemSeparatorComponent={[Function]}
   data={
     Array [
       Object {
@@ -1019,11 +811,81 @@ exports[`renders the received data along with the standby transactions 1`] = `
         "type": "SENT",
       },
       Object {
-        "__typename": "TokenTransfer",
-        "address": "0xce10ce10ce10ce10ce10ce10ce10ce10ce10ce10",
+        "__typename": "TokenExchange",
         "amount": Object {
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "currencyCode": "MXN",
+            "exchangeRate": "1.33",
+            "value": "-26.6",
+          },
+          "value": "-20",
+        },
+        "hash": "",
+        "makerAmount": Object {
+          "currencyCode": "cUSD",
+          "localAmount": Object {
+            "currencyCode": "MXN",
+            "exchangeRate": "1.33",
+            "value": "26.6",
+          },
+          "value": "20",
+        },
+        "status": "Pending",
+        "takerAmount": Object {
+          "currencyCode": "cGLD",
+          "localAmount": Object {
+            "currencyCode": "MXN",
+            "exchangeRate": "0.8866666666666666666711",
+            "value": "26.600000000000000000133",
+          },
+          "value": "30",
+        },
+        "timestamp": 1542409112,
+        "type": "EXCHANGE",
+      },
+      Object {
+        "__typename": "TokenExchange",
+        "amount": Object {
+          "currencyCode": "cUSD",
+          "localAmount": Object {
+            "currencyCode": "MXN",
+            "exchangeRate": "1.33",
+            "value": "26.6",
+          },
+          "value": "20",
+        },
+        "hash": "",
+        "makerAmount": Object {
+          "currencyCode": "cGLD",
+          "localAmount": Object {
+            "currencyCode": "MXN",
+            "exchangeRate": "0.8866666666666666666711",
+            "value": "26.600000000000000000133",
+          },
+          "value": "30",
+        },
+        "status": "Pending",
+        "takerAmount": Object {
+          "currencyCode": "cUSD",
+          "localAmount": Object {
+            "currencyCode": "MXN",
+            "exchangeRate": "1.33",
+            "value": "26.6",
+          },
+          "value": "20",
+        },
+        "timestamp": 1542409113,
+        "type": "EXCHANGE",
+      },
+      Object {
+        "__typename": "TokenTransfer",
+        "address": "0xce10ce10ce10ce10ce10ce10ce10ce10ce10ce10",
+        "amount": Object {
+          "__typename": "MoneyAmount",
+          "currencyCode": "cUSD",
+          "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "-0.2",
@@ -1039,8 +901,10 @@ exports[`renders the received data along with the standby transactions 1`] = `
       Object {
         "__typename": "TokenExchange",
         "amount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "0.994982275992944156",
@@ -1049,8 +913,10 @@ exports[`renders the received data along with the standby transactions 1`] = `
         },
         "hash": "0x16fbd53c4871f0657f40e1b4515184be04bed8912c6e2abc2cda549e4ad8f852",
         "makerAmount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cGLD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "10.06007113270411465777",
             "value": "1.006007113270411465777",
@@ -1059,8 +925,10 @@ exports[`renders the received data along with the standby transactions 1`] = `
         },
         "status": "Complete",
         "takerAmount": Object {
+          "__typename": "MoneyAmount",
           "currencyCode": "cUSD",
           "localAmount": Object {
+            "__typename": "LocalMoneyAmount",
             "currencyCode": "USD",
             "exchangeRate": "1",
             "value": "0.994982275992944156",
@@ -1079,7 +947,6 @@ exports[`renders the received data along with the standby transactions 1`] = `
   initialNumToRender={10}
   keyExtractor={[Function]}
   maxToRenderPerBatch={10}
-  numColumns={1}
   onContentSizeChange={[Function]}
   onEndReachedThreshold={2}
   onLayout={[Function]}
@@ -1103,7 +970,6 @@ exports[`renders the received data along with the standby transactions 1`] = `
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -1124,7 +990,8 @@ exports[`renders the received data along with the standby transactions 1`] = `
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -1167,16 +1034,20 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 <Image
                   source={
                     Object {
-                      "testUri": "../../../packages/mobile/src/images/unknown-user-icon.png",
+                      "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
                     }
                   }
                   style={
-                    Object {
-                      "alignItems": "center",
-                      "height": 40,
-                      "justifyContent": "center",
-                      "width": 40,
-                    }
+                    Array [
+                      Object {
+                        "alignSelf": "center",
+                        "margin": "auto",
+                      },
+                      Object {
+                        "height": 40,
+                        "width": 40,
+                      },
+                    ]
                   }
                 />
               </View>
@@ -1202,8 +1073,9 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 15,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
@@ -1213,25 +1085,23 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
-                      Object {
-                        "color": "#81868B",
-                        "fontFamily": "Hind-Regular",
-                        "fontSize": 15,
-                        "lineHeight": 20,
-                      },
+                      false,
                     ],
+                    Object {
+                      "color": "#2E3338",
+                    },
                   ]
                 }
               >
-                -
                 $
                 133.00
               </Text>
@@ -1239,66 +1109,19 @@ exports[`renders the received data along with the standby transactions 1`] = `
             <Text
               style={
                 Object {
-                  "color": "#81868B",
-                  "fontFamily": "Hind-Regular",
-                  "fontSize": 15,
-                  "marginTop": -2,
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
-              Eye for an Eye
+              confirmingTransaction
             </Text>
-            <View
-              style={
-                Array [
-                  Object {
-                    "alignItems": "center",
-                    "flex": 1,
-                    "flexDirection": "row",
-                  },
-                  Object {
-                    "marginTop": 8,
-                  },
-                ]
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                <Text
-                  style={
-                    Object {
-                      "color": "#42D689",
-                      "fontFamily": "Hind-Bold",
-                      "fontSize": 13,
-                      "lineHeight": 18,
-                    }
-                  }
-                >
-                  confirmingPayment
-                </Text>
-                 10:08 PM
-              </Text>
-            </View>
           </View>
         </View>
       </View>
-      <View
-        style={
-          Object {
-            "backgroundColor": "rgba(134, 138, 141, 0.15)",
-            "height": 1,
-            "marginHorizontal": 16,
-          }
-        }
-      />
     </View>
     <View
       onLayout={[Function]}
@@ -1307,7 +1130,6 @@ exports[`renders the received data along with the standby transactions 1`] = `
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -1328,7 +1150,261 @@ exports[`renders the received data along with the standby transactions 1`] = `
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            }
+          }
+        >
+          <View
+            style={
+              Object {
+                "alignItems": "center",
+                "flexDirection": "column",
+              }
+            }
+          >
+            <Image
+              resizeMode="contain"
+              source={
+                Object {
+                  "testUri": "../../../packages/mobile/src/images/transaction-exchange.png",
+                }
+              }
+              style={
+                Object {
+                  "height": 40,
+                  "width": 40,
+                }
+              }
+            />
+          </View>
+          <View
+            style={
+              Object {
+                "flex": 1,
+                "marginLeft": 16,
+              }
+            }
+          >
+            <View
+              style={
+                Object {
+                  "flexDirection": "row",
+                  "marginTop": -1,
+                }
+              }
+            >
+              <Text
+                style={
+                  Object {
+                    "color": "#2E3338",
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
+                  }
+                }
+              >
+                feedItemExchangeTitle
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={
+                  Array [
+                    Array [
+                      Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
+                        "marginLeft": "auto",
+                        "paddingLeft": 10,
+                      },
+                      false,
+                    ],
+                    Object {
+                      "color": "#2E3338",
+                    },
+                  ]
+                }
+              >
+                $
+                26.60
+              </Text>
+            </View>
+            <Text
+              style={
+                Object {
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
+                }
+              }
+            >
+              confirmingTransaction
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+    <View
+      onLayout={[Function]}
+      style={null}
+    >
+      <View
+        accessible={true}
+        focusable={true}
+        nativeBackgroundAndroid={
+          Object {
+            "attribute": "selectableItemBackground",
+            "type": "ThemeAttrAndroid",
+          }
+        }
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+      >
+        <View
+          style={
+            Object {
+              "flex": 1,
+              "flexDirection": "row",
+              "justifyContent": "space-between",
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
+            }
+          }
+        >
+          <View
+            style={
+              Object {
+                "alignItems": "center",
+                "flexDirection": "column",
+              }
+            }
+          >
+            <Image
+              resizeMode="contain"
+              source={
+                Object {
+                  "testUri": "../../../packages/mobile/src/images/transaction-exchange.png",
+                }
+              }
+              style={
+                Object {
+                  "height": 40,
+                  "width": 40,
+                }
+              }
+            />
+          </View>
+          <View
+            style={
+              Object {
+                "flex": 1,
+                "marginLeft": 16,
+              }
+            }
+          >
+            <View
+              style={
+                Object {
+                  "flexDirection": "row",
+                  "marginTop": -1,
+                }
+              }
+            >
+              <Text
+                style={
+                  Object {
+                    "color": "#2E3338",
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
+                  }
+                }
+              >
+                feedItemExchangeTitle
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={
+                  Array [
+                    Array [
+                      Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
+                        "marginLeft": "auto",
+                        "paddingLeft": 10,
+                      },
+                      Object {
+                        "color": "#1AB775",
+                      },
+                    ],
+                    Object {
+                      "color": "#1AB775",
+                    },
+                  ]
+                }
+              >
+                +
+                $
+                26.60
+              </Text>
+            </View>
+            <Text
+              style={
+                Object {
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
+                }
+              }
+            >
+              confirmingTransaction
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+    <View
+      onLayout={[Function]}
+      style={null}
+    >
+      <View
+        accessible={true}
+        focusable={true}
+        nativeBackgroundAndroid={
+          Object {
+            "attribute": "selectableItemBackground",
+            "type": "ThemeAttrAndroid",
+          }
+        }
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+      >
+        <View
+          style={
+            Object {
+              "flex": 1,
+              "flexDirection": "row",
+              "justifyContent": "space-between",
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -1371,16 +1447,20 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 <Image
                   source={
                     Object {
-                      "testUri": "../../../packages/mobile/src/images/unknown-user-icon.png",
+                      "testUri": "../../../packages/react-components/images/unknown-user-icon.png",
                     }
                   }
                   style={
-                    Object {
-                      "alignItems": "center",
-                      "height": 40,
-                      "justifyContent": "center",
-                      "width": 40,
-                    }
+                    Array [
+                      Object {
+                        "alignSelf": "center",
+                        "margin": "auto",
+                      },
+                      Object {
+                        "height": 40,
+                        "width": 40,
+                      },
+                    ]
                   }
                 />
               </View>
@@ -1406,8 +1486,9 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 15,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
@@ -1417,25 +1498,23 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
-                      Object {
-                        "color": "#81868B",
-                        "fontFamily": "Hind-Regular",
-                        "fontSize": 15,
-                        "lineHeight": 20,
-                      },
+                      false,
                     ],
+                    Object {
+                      "color": "#2E3338",
+                    },
                   ]
                 }
               >
-                -
                 $
                 0.20
               </Text>
@@ -1443,54 +1522,19 @@ exports[`renders the received data along with the standby transactions 1`] = `
             <Text
               style={
                 Object {
-                  "color": "#81868B",
-                  "fontFamily": "Hind-Regular",
-                  "fontSize": 15,
-                  "marginTop": -2,
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
-              Hi
+              feedItemSentInfo
             </Text>
-            <View
-              style={
-                Array [
-                  Object {
-                    "alignItems": "center",
-                    "flex": 1,
-                    "flexDirection": "row",
-                  },
-                  Object {
-                    "marginTop": 8,
-                  },
-                ]
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                Jan 9 global:at 12:42 AM
-              </Text>
-            </View>
           </View>
         </View>
       </View>
-      <View
-        style={
-          Object {
-            "backgroundColor": "rgba(134, 138, 141, 0.15)",
-            "height": 1,
-            "marginHorizontal": 16,
-          }
-        }
-      />
     </View>
     <View
       onLayout={[Function]}
@@ -1499,7 +1543,6 @@ exports[`renders the received data along with the standby transactions 1`] = `
       <View
         accessible={true}
         focusable={true}
-        isTVSelectable={true}
         nativeBackgroundAndroid={
           Object {
             "attribute": "selectableItemBackground",
@@ -1520,7 +1563,8 @@ exports[`renders the received data along with the standby transactions 1`] = `
               "flex": 1,
               "flexDirection": "row",
               "justifyContent": "space-between",
-              "padding": 16,
+              "paddingHorizontal": 16,
+              "paddingVertical": 12,
             }
           }
         >
@@ -1529,9 +1573,6 @@ exports[`renders the received data along with the standby transactions 1`] = `
               Object {
                 "alignItems": "center",
                 "flexDirection": "column",
-                "height": 40,
-                "justifyContent": "center",
-                "width": 40,
               }
             }
           >
@@ -1539,11 +1580,12 @@ exports[`renders the received data along with the standby transactions 1`] = `
               resizeMode="contain"
               source={
                 Object {
-                  "testUri": "../../../packages/mobile/src/images/exchangeGoldGreen.png",
+                  "testUri": "../../../packages/mobile/src/images/transaction-exchange.png",
                 }
               }
               style={
                 Object {
+                  "height": 40,
                   "width": 40,
                 }
               }
@@ -1561,7 +1603,7 @@ exports[`renders the received data along with the standby transactions 1`] = `
               style={
                 Object {
                   "flexDirection": "row",
-                  "marginTop": 3,
+                  "marginTop": -1,
                 }
               }
             >
@@ -1569,46 +1611,50 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 style={
                   Object {
                     "color": "#2E3338",
-                    "fontFamily": "Hind-SemiBold",
-                    "fontSize": 14,
-                    "lineHeight": 18,
+                    "fontFamily": "Inter-Medium",
+                    "fontSize": 16,
+                    "lineHeight": 22,
                   }
                 }
               >
-                exchange
+                feedItemExchangeTitle
               </Text>
               <Text
                 numberOfLines={1}
                 style={
                   Array [
-                    Object {
-                      "color": "#42D689",
-                    },
                     Array [
                       Object {
+                        "color": "#2E3338",
+                        "fontFamily": "Inter-Medium",
+                        "fontSize": 16,
+                        "lineHeight": 22,
                         "marginLeft": "auto",
                         "paddingLeft": 10,
                       },
                       Object {
-                        "color": "#2E3338",
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 15,
-                        "lineHeight": 20,
+                        "color": "#1AB775",
                       },
                     ],
+                    Object {
+                      "color": "#1AB775",
+                    },
                   ]
                 }
               >
-                
+                +
                 $
                 0.99
               </Text>
             </View>
-            <View
+            <Text
               style={
                 Object {
-                  "alignItems": "center",
-                  "flexDirection": "row",
+                  "color": "#9CA4A9",
+                  "fontFamily": "Inter-Regular",
+                  "fontSize": 14,
+                  "lineHeight": 18,
+                  "paddingTop": 2,
                 }
               }
             >
@@ -1616,93 +1662,17 @@ exports[`renders the received data along with the standby transactions 1`] = `
                 numberOfLines={1}
                 style={
                   Array [
+                    undefined,
                     Object {
-                      "color": "#FBCC5C",
+                      "color": undefined,
                     },
-                    Array [
-                      Object {
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 16,
-                        "lineHeight": 20,
-                      },
-                      false,
-                    ],
                   ]
                 }
               >
                 
-                0.10
+                0.100
               </Text>
-              <View
-                style={
-                  Object {
-                    "paddingBottom": 8,
-                    "paddingHorizontal": 5,
-                  }
-                }
-              >
-                <svg
-                  fill="none"
-                  height="6"
-                  style={Object {}}
-                  viewBox="0 0 9 6"
-                  width="9"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    clip-rule="evenodd"
-                    d="M5.0998 5.45001L8.39993 3.02504L5.0998 0.600067V2.22512L0.399933 2.22512V3.82518L5.0998 3.82518V5.45001Z"
-                    fill="rgba(0, 0, 0, .4)"
-                    fill-rule="evenodd"
-                    style={Object {}}
-                  />
-                </svg>
-              </View>
-              <Text
-                numberOfLines={1}
-                style={
-                  Array [
-                    Object {
-                      "color": "#42D689",
-                    },
-                    Array [
-                      Object {
-                        "fontFamily": "Hind-SemiBold",
-                        "fontSize": 16,
-                        "lineHeight": 20,
-                      },
-                      false,
-                    ],
-                  ]
-                }
-              >
-                
-                0.99
-              </Text>
-            </View>
-            <View
-              style={
-                Object {
-                  "alignItems": "center",
-                  "flex": 1,
-                  "flexDirection": "row",
-                  "marginTop": 8,
-                }
-              }
-            >
-              <Text
-                style={
-                  Object {
-                    "color": "#BDBDBD",
-                    "fontFamily": "Hind-Regular",
-                    "fontSize": 14,
-                    "lineHeight": 18,
-                  }
-                }
-              >
-                Jan 9 global:at 12:41 AM
-              </Text>
-            </View>
+            </Text>
           </View>
         </View>
       </View>
