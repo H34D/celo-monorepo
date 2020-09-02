@@ -1,17 +1,20 @@
 import { ClaimTypes, IdentityMetadataWrapper } from '@celo/contractkit/lib/identity'
+import { appendPath } from '@celo/utils/lib/string'
 import { flags as oFlags } from '@oclif/command'
 import fetch from 'cross-fetch'
 import { BaseCommand } from '../../base'
 import { newCheckBuilder } from '../../utils/checks'
 import { Flags } from '../../utils/command'
-
 export default class TestAttestationService extends BaseCommand {
   static description =
     'Tests whether the account has setup the attestation service properly by calling the test endpoint on it'
 
   static flags = {
     ...BaseCommand.flags,
-    from: Flags.address({ required: true, description: "Your validator's account address" }),
+    from: Flags.address({
+      required: true,
+      description: "Your validator's signer or account address",
+    }),
     phoneNumber: Flags.phoneNumber({
       required: true,
       description: 'The phone number to send the test message to',
@@ -27,13 +30,21 @@ export default class TestAttestationService extends BaseCommand {
     const address = flags.from
     const { phoneNumber, message } = flags
 
-    await newCheckBuilder(this)
-      .isAccount(address)
+    await newCheckBuilder(this, flags.from)
+      .isSignerOrAccount()
       .canSign(address)
       .runChecks()
 
     const accounts = await this.kit.contracts.getAccounts()
-    const metadataURL = await accounts.getMetadataURL(address)
+    const account = await accounts.signerToAccount(address)
+
+    const hasAuthorizedAttestationSigner = await accounts.hasAuthorizedAttestationSigner(account)
+    if (!hasAuthorizedAttestationSigner) {
+      console.info('Account has not authorized an attestation signer')
+      return
+    }
+
+    const metadataURL = await accounts.getMetadataURL(account)
 
     if (!metadataURL) {
       console.info('No metadata set for address')
@@ -42,7 +53,7 @@ export default class TestAttestationService extends BaseCommand {
 
     let metadata: IdentityMetadataWrapper
     try {
-      metadata = await IdentityMetadataWrapper.fetchFromURL(metadataURL)
+      metadata = await IdentityMetadataWrapper.fetchFromURL(this.kit, metadataURL)
     } catch (error) {
       console.error(`Metadata could not be retrieved from ${metadataURL}: ${error.toString()}`)
       return
@@ -57,11 +68,14 @@ export default class TestAttestationService extends BaseCommand {
     const signature = await this.kit.web3.eth.sign(phoneNumber + message, address)
 
     try {
-      const response = await fetch(attestationServiceUrlClaim.url + '/test_attestations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber, signature, message }),
-      })
+      const response = await fetch(
+        appendPath(attestationServiceUrlClaim.url, 'test_attestations'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber, signature, message }),
+        }
+      )
 
       if (!response.ok) {
         console.error('Request was not successful')

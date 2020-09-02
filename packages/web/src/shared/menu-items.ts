@@ -1,39 +1,79 @@
-export const menuItems = {
+export interface MenuLink {
+  name: string
+  link: string
+}
+export const pagePaths = {
   HOME: {
     name: 'Home',
     link: '/',
-  },
-  APPLICATIONS: {
-    name: 'Applications',
-    link: '/applications',
   },
   ABOUT_US: {
     name: 'About',
     link: '/about',
   },
-  BUILD: {
-    name: 'Build',
-    link: '/build',
+  ALLIANCE_COLLECTIVE: {
+    name: 'Alliance',
+    link: '/alliance',
+  },
+  APPLICATIONS: {
+    name: 'Applications',
+    link: '/applications',
   },
   BRAND: {
-    name: 'Experience - Brand Kit',
+    name: 'BrandKit',
     link: '/experience/brand',
   },
+  BRAND_POLICY: {
+    name: 'Brand Policy',
+    link: '/brand-policy',
+  },
+  BUILD: {
+    name: 'Validators',
+    link: '/validators',
+  },
+  CODE_OF_CONDUCT: {
+    name: 'Code of Conduct',
+    link: '/code-of-conduct',
+  },
   COMMUNITY: {
-    name: 'Connect',
+    name: 'Community',
     link: '/community',
+  },
+  EVENTS_KIT: {
+    name: 'EventKit',
+    link: '/experience/events',
+  },
+  DEVELOPERS: {
+    name: 'Developers',
+    link: '/developers',
+  },
+  FAQ: {
+    name: 'FAQ',
+    link: '/faq',
+  },
+  FAUCET: {
+    name: 'Faucet',
+    link: '/developers/faucet',
   },
   JOBS: {
     name: 'Join',
     link: '/jobs',
   },
-  MEDIUM: {
-    name: 'Medium',
-    link: 'https://medium.com/@celo.org',
+  MERCHANTS: {
+    name: 'MerchantKit',
+    link: '/experience/merchant',
   },
   PRIVACY: {
     name: 'Privacy Policy',
     link: '/privacy',
+  },
+  PAPERS: {
+    name: 'White Papers',
+    link: '/papers',
+  },
+  PRESS: {
+    name: 'Press',
+    link: '/press',
   },
   TECH: {
     name: 'Technology',
@@ -43,33 +83,56 @@ export const menuItems = {
     name: 'Terms',
     link: '/terms',
   },
-  TWITTER: {
-    name: 'Twitter',
-    link: 'https://twitter.com/CeloHQ',
+  VALIDATORS_LIST: {
+    name: 'Validators List',
+    link: '/validators/explore',
   },
-  CODE_OF_CONDUCT: {
-    name: 'Code of Conduct',
-    link: '/code-of-conduct',
+  VALIDATORS_LIST__BAKLAVA: {
+    name: 'Validators List - Baklava',
+    link: '/validators/explore/baklava',
+  },
+  VALIDATORS_LIST_BAKLAVASTAGING: {
+    name: 'Validators List - Baklavastaging',
+    link: '/validators/explore/baklavastaging',
   },
 }
 
+export const MAIN_MENU = [
+  pagePaths.ABOUT_US,
+  pagePaths.JOBS,
+  pagePaths.BUILD,
+  pagePaths.DEVELOPERS,
+  pagePaths.ALLIANCE_COLLECTIVE,
+  pagePaths.COMMUNITY,
+]
+
+// TODO: Temporary link to the master branch documentation for 'sdkDocs' and 'sdkTutorial'
 export enum CeloLinks {
+  audits = '/audits',
   agreement = '/user-agreement',
-  faq = '/faq',
-  faucet = '/build/faucet',
+  faucet = '/developers/faucet',
   iconsLicense = 'https://creativecommons.org/licenses/by-nd/4.0/legalcode',
   discord = 'https://discord.gg/6yWMkgM',
   discourse = 'https://forum.celo.org/',
-  walletApp = '/build/wallet',
+  walletApp = '/developers/wallet',
   blockscout = 'http://alfajores-blockscout.celo-testnet.org/',
   disclaimer = 'https://docs.celo.org/important-information/alfajores-testnet-disclaimer',
   docs = 'https://docs.celo.org/',
   docsOverview = 'https://docs.celo.org/overview',
-  sdkDocs = 'https://docs.celo.org/celo-sdk/introduction',
+  sdkDocs = 'https://docs.celo.org/v/master/developer-guide/overview/introduction',
+  sdkTutorial = 'https://docs.celo.org/v/master/developer-guide/start',
   nodeDocs = 'https://docs.celo.org/getting-started/running-a-full-node',
   gettingStarted = 'https://docs.celo.org/getting-started/alfajores-testnet',
+  coinlist = 'https://coinlist.co/celo?utm_source=celo%20website&utm_medium=website%20widget&utm_campaign=celowebsite_20200318',
   gitHub = 'https://github.com/celo-org',
-  linkedIn = 'https://www.linkedin.com/company/celohq/',
+  reserve = 'https://www.celoreserve.org',
+  instagram = 'https://www.instagram.com/celoorg/',
+  twitter = 'https://twitter.com/CeloOrg',
+  medium = 'https://medium.com/celoOrg',
+  mediumUser = 'https://medium.com/@celoorg',
+  mediumPublication = 'https://medium.com/celoOrg',
+  fundingRequest = 'https://c-labs.typeform.com/to/gj9aUp',
+  linkedIn = 'https://www.linkedin.com/company/celoOrg/',
   monorepo = 'https://github.com/celo-org/celo-monorepo',
   blockChainRepo = 'https://github.com/celo-org/celo-blockchain',
   playStoreWallet = 'https://play.google.com/store/apps/details?id=org.celo.mobile.alfajores',
@@ -113,7 +176,8 @@ export const hashNav = {
     newsletter: 'newsletter',
   },
   join: { roles: 'roles' },
-  home: { partnerships: 'partnerships' },
+  home: { partnerships: 'partnerships', timeline: 'timeline' },
+  brandIntro: { overview: 'overview', brandVoice: 'brand-voice' },
   brandLogo: { overview: 'overview', space: 'space-and-sizing', backgrounds: 'backgrounds' },
   brandColor: { overview: 'overview', backgrounds: 'background-colors' },
   brandComposition: {
@@ -129,6 +193,33 @@ export const hashNav = {
     overview: 'overview',
   },
   brandTypography: { overview: 'overview', scale: 'type-scale' },
+  eventsIntro: {
+    overview: 'overview',
+    brandVoice: 'brand-voice',
+  },
+  eventsFlavor: {
+    overview: 'overview',
+    codeOfConduct: 'code-of-conduct',
+    foster: 'foster',
+    uniqueGifts: 'unique-gifts',
+    rituals: 'rituals',
+    tenets: 'tenets',
+  },
+  eventsResources: {
+    overview: 'overview',
+    quickTips: 'quick-tips',
+    planning: 'planning',
+    social: 'social-media',
+  },
+  eventExamples: {
+    examples: 'examples',
+    slideDecks: 'slide-decks',
+    videos: 'videos',
+  },
+  eventCircles: {
+    overview: 'overview',
+    sponsorship: 'sponsorship',
+  },
 }
 
-export default menuItems
+export default pagePaths

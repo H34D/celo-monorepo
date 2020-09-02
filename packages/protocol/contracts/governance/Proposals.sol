@@ -1,10 +1,10 @@
 pragma solidity ^0.5.8;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "../common/FixidityLib.sol";
-import "../common/libraries/AddressesHelper.sol";
 
 /**
  * @title A library operating on Celo Governance proposals.
@@ -46,6 +46,14 @@ library Proposals {
     bool approved;
     uint256 networkWeight;
     string descriptionUrl;
+  }
+
+  /**
+   * @notice Returns the storage, major, minor, and patch version of the contract.
+   * @return The storage, major, minor, and patch version of the contract.
+   */
+  function getVersionNumber() external pure returns (uint256, uint256, uint256, uint256) {
+    return (1, 1, 1, 0);
   }
 
   /**
@@ -346,6 +354,7 @@ library Proposals {
 
   // call has been separated into its own function in order to take advantage
   // of the Solidity's code generator to produce a loop that copies tx.data into memory.
+  // TODO: Move to Transaction.execute whenever the next change to Governance is made.
   /**
    * @notice Executes a function call.
    * @param value The value of Celo Gold to be sent with the function call.
@@ -359,8 +368,7 @@ library Proposals {
   {
     bool result;
 
-    if (dataLength > 0)
-      require(AddressesHelper.isContract(destination), "Invalid contract address");
+    if (dataLength > 0) require(Address.isContract(destination), "Invalid contract address");
 
     /* solhint-disable no-inline-assembly */
     assembly {

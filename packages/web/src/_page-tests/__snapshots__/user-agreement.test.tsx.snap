@@ -101,7 +101,8 @@ exports[`UserAgreement renders 1`] = `
           }
         }
       >
-        agreementTitle
+        User Agreement and Terms:
+ Celo Alfajores Testnet
       </h1>
     </div>
   </div>
@@ -192,7 +193,7 @@ exports[`UserAgreement renders 1`] = `
           }
         }
       >
-        This User Agreement and Test Terms (“Agreement”) constitute a contract between you and A Protocol Inc. (“Company” or “Celo” and including all affiliates) and applies to your use of the Celo Products, including the Celo Wallet, and other features, technologies and functionalities offered by the Company to you through a website, app, or through other means (the “Celo Services.”) as part of a limited test. The Celo Services are provided to you subject to this Agreement as well as the Celo Privacy Policy available at 
+        This User Agreement and Test Terms (“Agreement”) constitute a contract between you and the Celo Foundation (“Company” or “Celo” and including all affiliates) and applies to your use of the Celo Products, including the Celo Wallet, and other features, technologies and functionalities offered by the Company to you through a website, app, or through other means (the “Celo Services.”) as part of a limited test. The Celo Services are provided to you subject to this Agreement as well as the Celo Privacy Policy available at 
          
         <div
           className="css-view-1dbjc4n"
@@ -214,13 +215,16 @@ exports[`UserAgreement renders 1`] = `
             data-focusable={true}
             dir="auto"
             href="/privacy"
+            onClick={[Function]}
             role="link"
             style={
               Object {
+                "WebkitTextDecorationStyle": "solid",
                 "cursor": "pointer",
                 "display": "inline",
                 "opacity": 1,
                 "textDecoration": "underline",
+                "textDecorationStyle": "solid",
               }
             }
           >
@@ -260,13 +264,16 @@ You understand that you are participating in a test, and that the Celo Services 
             data-focusable={true}
             dir="auto"
             href="https://play.google.com/store/apps/details?id=org.celo.mobile.alfajores"
+            onClick={[Function]}
             role="link"
             style={
               Object {
+                "WebkitTextDecorationStyle": "solid",
                 "cursor": "pointer",
                 "display": "inline",
                 "opacity": 1,
                 "textDecoration": "underline",
+                "textDecorationStyle": "solid",
               }
             }
           >
@@ -311,13 +318,16 @@ The Company reserves the right in its sole and absolute discretion to terminate 
             data-focusable={true}
             dir="auto"
             href="/privacy"
+            onClick={[Function]}
             role="link"
             style={
               Object {
+                "WebkitTextDecorationStyle": "solid",
                 "cursor": "pointer",
                 "display": "inline",
                 "opacity": 1,
                 "textDecoration": "underline",
+                "textDecorationStyle": "solid",
               }
             }
           >

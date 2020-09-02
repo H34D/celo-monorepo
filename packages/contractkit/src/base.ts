@@ -11,17 +11,22 @@ export enum CeloContract {
   Escrow = 'Escrow',
   Exchange = 'Exchange',
   FeeCurrencyWhitelist = 'FeeCurrencyWhitelist',
+  Freezer = 'Freezer',
   GasPriceMinimum = 'GasPriceMinimum',
   GoldToken = 'GoldToken',
   Governance = 'Governance',
   LockedGold = 'LockedGold',
+  MultiSig = 'MultiSig',
   Random = 'Random',
   Registry = 'Registry',
   Reserve = 'Reserve',
   SortedOracles = 'SortedOracles',
   StableToken = 'StableToken',
+  TransferWhitelist = 'TransferWhitelist',
   Validators = 'Validators',
 }
+
+export const ProxyContracts = Object.keys(CeloContract).map((c) => `${c}Proxy`)
 
 export type CeloToken = CeloContract.GoldToken | CeloContract.StableToken
 

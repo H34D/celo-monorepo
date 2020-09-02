@@ -1,15 +1,17 @@
 import Button, { BtnTypes } from '@celo/react-components/components/Button'
-import { anonymizedPhone } from '@celo/utils/src/phoneNumbers'
 import * as React from 'react'
 import { Clipboard, StyleSheet, Text } from 'react-native'
 import DeviceInfo from 'react-native-device-info'
-import SafeAreaView from 'react-native-safe-area-view'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { connect } from 'react-redux'
 import LogView from 'src/app/LogView'
+import { noHeader } from 'src/navigator/Headers.v2'
+import { navigate } from 'src/navigator/NavigationService'
+import { Screens } from 'src/navigator/Screens'
 import { RootState } from 'src/redux/reducers'
 import Logger from 'src/utils/Logger'
-import { getLatestBlock } from 'src/web3/actions'
 import { currentAccountSelector } from 'src/web3/selectors'
+import { getLatestBlock } from 'src/web3/utils'
 
 interface State {
   reactNativeLogs: string
@@ -18,7 +20,7 @@ interface State {
 }
 
 export class Debug extends React.Component<RootState, State> {
-  static navigationOptions = { header: null }
+  static navigationOptions = noHeader
 
   state = {
     reactNativeLogs: '',
@@ -46,7 +48,7 @@ export class Debug extends React.Component<RootState, State> {
     })
   }
 
-  onClickText = (...text: string[]) => {
+  onClickText = (...text: Array<string | null>) => {
     return () => {
       Logger.showMessage('Copied to Clipboard')
       Clipboard.setString(text.join(', '))
@@ -54,13 +56,13 @@ export class Debug extends React.Component<RootState, State> {
   }
 
   onClickEmailLogs = async () => {
-    await Logger.emailLogsToSupport(anonymizedPhone(this.props.account.e164PhoneNumber))
+    navigate(Screens.SupportContact)
   }
 
   render() {
     const { reactNativeLogs, gethLogs, latestBlockNumber } = this.state
     const pincodeType = this.props.account.pincodeType
-    const address = currentAccountSelector(this.props) || ''
+    const address = currentAccountSelector(this.props)
     const phoneNumber = this.props.account.e164PhoneNumber
     const version = DeviceInfo.getVersion()
     const buildNumber = DeviceInfo.getBuildNumber()
@@ -113,7 +115,6 @@ const style = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
   },
   singleLine: {
     marginTop: 5,

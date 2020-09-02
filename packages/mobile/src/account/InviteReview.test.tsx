@@ -4,12 +4,15 @@ import { fireEvent, render } from 'react-native-testing-library'
 import { Provider } from 'react-redux'
 import * as renderer from 'react-test-renderer'
 import InviteReviewConnected, { InviteReview } from 'src/account/InviteReview'
-import { createMockStore, getMockI18nProps } from 'test/utils'
-import { mockCountryCode, mockNavigation } from 'test/values'
+import { Screens } from 'src/navigator/Screens'
+import { createMockStore, getMockI18nProps, getMockStackScreenProps } from 'test/utils'
+import { mockRecipient } from 'test/values'
 
 jest.mock('src/geth/GethAwareButton', () => {
   return mockButton
 })
+
+const mockScreenProps = getMockStackScreenProps(Screens.InviteReview, { recipient: mockRecipient })
 
 describe('InviteReview', () => {
   beforeAll(() => {
@@ -23,9 +26,7 @@ describe('InviteReview', () => {
   it('renders correctly', () => {
     const tree = renderer.create(
       <Provider store={createMockStore()}>
-        {/*
-          // @ts-ignore */}
-        <InviteReviewConnected navigation={mockNavigation} />
+        <InviteReviewConnected {...mockScreenProps} />
       </Provider>
     )
     expect(tree).toMatchSnapshot()
@@ -40,22 +41,21 @@ describe('InviteReview', () => {
     const inviteReview = render(
       <Provider store={createMockStore()}>
         <InviteReview
+          account="0xabc"
           inviteInProgress={false}
-          defaultCountryCode={mockCountryCode}
           dollarBalance={'100'}
           fetchDollarBalance={jest.fn()}
           hideAlert={hideAlert}
           showError={jest.fn()}
           sendInvite={sendInvite}
           {...getMockI18nProps()}
-          // @ts-ignore
-          navigation={mockNavigation}
+          {...mockScreenProps}
         />
       </Provider>
     )
 
     fireEvent.press(inviteReview.getByTestId('inviteWhatsApp'))
     expect(hideAlert).toHaveBeenCalled()
-    expect(sendInvite).toHaveBeenCalledWith('John Doe', '+14155550000', 'WhatsApp')
+    expect(sendInvite).toHaveBeenCalledWith('+14155550000', 'WhatsApp')
   })
 })

@@ -6,12 +6,10 @@ import { fontStyles } from '@celo/react-components/styles/fonts'
 import { componentStyles } from '@celo/react-components/styles/styles'
 import * as React from 'react'
 import { WithTranslation } from 'react-i18next'
-import { ActivityIndicator, Image, Keyboard, StyleSheet, Text, View } from 'react-native'
-import SafeAreaView from 'react-native-safe-area-view'
+import { ActivityIndicator, Keyboard, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { connect } from 'react-redux'
 import { hideAlert } from 'src/alert/actions'
-import CeloAnalytics from 'src/analytics/CeloAnalytics'
-import { CustomEventNames } from 'src/analytics/constants'
 import BackupPhraseContainer, {
   BackupPhraseContainerMode,
   BackupPhraseType,
@@ -24,7 +22,7 @@ import {
 } from 'src/backup/utils'
 import GethAwareButton from 'src/geth/GethAwareButton'
 import { Namespaces, withTranslation } from 'src/i18n'
-import { backupIcon } from 'src/images/Images'
+import SafeguardsIcon from 'src/icons/SafeguardsIcon'
 import { importBackupPhrase } from 'src/import/actions'
 import { nuxNavigationOptions } from 'src/navigator/Headers'
 import { RootState } from 'src/redux/reducers'
@@ -77,7 +75,6 @@ export class ImportWalletSocial extends React.Component<Props, State> {
     const { phrase1, phrase2 } = this.state
     Keyboard.dismiss()
     this.props.hideAlert()
-    CeloAnalytics.track(CustomEventNames.import_wallet_submit)
 
     const formattedPhrase1 = formatBackupPhraseOnSubmit(phrase1)
     const formattedPhrase2 = formatBackupPhraseOnSubmit(phrase2)
@@ -101,7 +98,7 @@ export class ImportWalletSocial extends React.Component<Props, State> {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="always"
         >
-          <Image source={backupIcon} style={styles.logo} />
+          <SafeguardsIcon style={styles.logo} width={147} height={75} />
           <Text style={fontStyles.h1}>{t('restoreSocial')}</Text>
           <Text style={fontStyles.body}>{t('socialImportInfo')}</Text>
           <BackupPhraseContainer
@@ -130,7 +127,7 @@ export class ImportWalletSocial extends React.Component<Props, State> {
 
         {isImportingWallet && (
           <View style={styles.loadingSpinnerContainer} testID="ImportWalletLoadingCircle">
-            <ActivityIndicator size="large" color={colors.celoGreen} />
+            <ActivityIndicator size="large" color={colors.greenBrand} />
           </View>
         )}
 
@@ -155,7 +152,6 @@ export class ImportWalletSocial extends React.Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     justifyContent: 'space-between',
   },
   scrollContainer: {
@@ -164,12 +160,11 @@ const styles = StyleSheet.create({
   },
   logo: {
     alignSelf: 'center',
-    height: 75,
-    width: 75,
+    marginBottom: 20,
   },
   tip: {
     ...fontStyles.bodySmall,
-    color: colors.darkSecondary,
+    color: colors.gray5,
     marginTop: 20,
     marginHorizontal: 2,
   },
@@ -181,4 +176,4 @@ const styles = StyleSheet.create({
 export default connect<StateProps, DispatchProps, {}, RootState>(mapStateToProps, {
   importBackupPhrase,
   hideAlert,
-})(withTranslation(Namespaces.nuxRestoreWallet3)(ImportWalletSocial))
+})(withTranslation<Props>(Namespaces.nuxRestoreWallet3)(ImportWalletSocial))

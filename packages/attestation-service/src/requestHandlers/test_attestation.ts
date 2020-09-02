@@ -1,9 +1,11 @@
 import { AttestationServiceTestRequest } from '@celo/utils/lib/io'
 import { verifySignature } from '@celo/utils/lib/signatureUtils'
 import express from 'express'
-import { getAccountAddress } from '../env'
+import { getAccountAddress, getAttestationSignerAddress } from '../env'
+import { rootLogger } from '../logger'
 import { ErrorMessages, respondWithError } from '../request'
-import { smsProviderFor } from '../sms'
+import { startSendSms } from '../sms'
+
 export { AttestationServiceTestRequestType } from '@celo/utils/lib/io'
 
 export async function handleTestAttestationRequest(
@@ -11,23 +13,30 @@ export async function handleTestAttestationRequest(
   res: express.Response,
   testRequest: AttestationServiceTestRequest
 ) {
-  const isValid = verifySignature(
+  const accountIsValid = verifySignature(
     testRequest.phoneNumber + testRequest.message,
     testRequest.signature,
     getAccountAddress()
   )
 
-  if (!isValid) {
-    respondWithError(res, 422, ErrorMessages.INVALID_SIGNATURE)
-    return
+  if (!accountIsValid) {
+    // Signature may be via attestation signer (for ReleaseGold specifically)
+    const signerIsValid = verifySignature(
+      testRequest.phoneNumber + testRequest.message,
+      testRequest.signature,
+      getAttestationSignerAddress()
+    )
+    if (!signerIsValid) {
+      respondWithError(res, 422, ErrorMessages.INVALID_SIGNATURE)
+      return
+    }
   }
 
-  const provider = smsProviderFor(testRequest.phoneNumber)
-  if (provider === undefined) {
-    respondWithError(res, 422, ErrorMessages.NO_PROVIDER_SETUP)
-    return
+  try {
+    const provider = await startSendSms(testRequest.phoneNumber, testRequest.message)
+    res.json({ success: true, provider }).status(201)
+  } catch (error) {
+    rootLogger.error(error)
+    res.json({ success: false, error: error.message }).status(500)
   }
-
-  await provider!.sendSms(testRequest.phoneNumber, testRequest.message)
-  res.json({ success: true }).status(201)
 }
